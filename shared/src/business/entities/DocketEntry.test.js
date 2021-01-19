@@ -14,7 +14,7 @@ const {
   TRANSCRIPT_EVENT_CODE,
 } = require('./EntityConstants');
 const { applicationContext } = require('../test/createTestApplicationContext');
-const { DocketEntry } = require('./DocketEntry');
+const { DocketEntry, isServed } = require('./DocketEntry');
 const { omit } = require('lodash');
 const { WorkItem } = require('./WorkItem');
 
@@ -118,6 +118,35 @@ describe('DocketEntry entity', () => {
       const doc1 = new DocketEntry({ eventCode: 'O' }, { applicationContext });
 
       expect(doc1.isCourtIssued()).toBeTruthy();
+    });
+  });
+
+  describe('isServed', () => {
+    it('should return false when servedAt is undefined and isLegacyServed is false', () => {
+      const doc1 = new DocketEntry(
+        { isLegacyServed: undefined, servedAt: undefined },
+        { applicationContext },
+      );
+
+      expect(isServed(doc1)).toBeFalsy();
+    });
+
+    it('should return true when servedAt is defined', () => {
+      const doc1 = new DocketEntry(
+        { isLegacyServed: undefined, servedAt: '2020-07-17T19:28:29.675Z' },
+        { applicationContext },
+      );
+
+      expect(isServed(doc1)).toBeTruthy();
+    });
+
+    it('should return true when servedAt is undefined and isLegacyServed is true', () => {
+      const doc1 = new DocketEntry(
+        { isLegacyServed: true, servedAt: undefined },
+        { applicationContext },
+      );
+
+      expect(isServed(doc1)).toBeTruthy();
     });
   });
 
@@ -1684,6 +1713,16 @@ describe('DocketEntry entity', () => {
         {
           ...A_VALID_DOCKET_ENTRY,
           documentTitle: 'Amended Simultaneous Memoranda of Law',
+        },
+        { applicationContext },
+      );
+      expect(docketEntry.isAutoServed()).toBeFalsy();
+    });
+
+    it('should return false if the documentType is an external document and the documentType contains Simultaneous', () => {
+      const docketEntry = new DocketEntry(
+        {
+          ...A_VALID_DOCKET_ENTRY,
           documentType: 'Amended Simultaneous Memoranda of Law',
         },
         { applicationContext },
