@@ -172,6 +172,37 @@ describe('updateDocketEntryWizardDataAction', () => {
       expect(result.state.form.previousDocument).toEqual(undefined);
       expect(result.state.form).toEqual({});
     });
+
+    it('does not set default previousDocument and metadata when props.key=eventCode, state.screenMetadata.supporting is true, there is one previous document, but it is not found in docket entries', async () => {
+      const result = await runAction(updateDocketEntryWizardDataAction, {
+        modules: { presenter },
+        props: {
+          key: 'eventCode',
+        },
+        state: {
+          caseDetail,
+          form: {
+            documentTitle: 'document title',
+            secondaryDocument: {
+              freeText: 'Guy Fieri is my spirit animal.',
+              ordinalValue: 'asdf',
+              previousDocument: {},
+              serviceDate: new Date(),
+              trialLocation: 'Flavortown',
+            },
+          },
+          screenMetadata: {
+            filedDocketEntryIds: ['23'],
+            primary: { something: true, somethingElse: false },
+            secondary: { something: true, somethingElse: false },
+            supporting: true,
+          },
+        },
+      });
+
+      expect(result.state.form.previousDocument).toEqual(undefined);
+      expect(result.state.form).toEqual({});
+    });
   });
 
   describe('secondaryDocument.eventCode', () => {
