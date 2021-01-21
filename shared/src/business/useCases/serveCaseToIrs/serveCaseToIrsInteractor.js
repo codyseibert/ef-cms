@@ -199,8 +199,11 @@ exports.serveCaseToIrsInteractor = async ({
     workItemToUpdate: initializeCaseWorkItem,
   });
   const caseWithServedDocketEntryInformation = await applicationContext
-    .getPersistenceGateway()
-    .updateCase({ applicationContext, caseToUpdate: caseEntity });
+    .getUseCaseHelpers()
+    .updateCaseAndAssociations({
+      applicationContext,
+      caseToUpdate: caseEntity,
+    });
 
   const caseEntityToUpdate = new Case(caseWithServedDocketEntryInformation, {
     applicationContext,
@@ -346,9 +349,9 @@ exports.serveCaseToIrsInteractor = async ({
     }));
   }
 
-  await applicationContext.getPersistenceGateway().updateCase({
+  await applicationContext.getUseCaseHelpers().updateCaseAndAssociations({
     applicationContext,
-    caseToUpdate: caseEntityToUpdate.validate().toRawObject(),
+    caseToUpdate: caseEntityToUpdate,
   });
 
   return urlToReturn;
