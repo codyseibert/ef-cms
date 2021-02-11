@@ -110,6 +110,15 @@ export const getEmailsForAddress = address => {
     applicationContext,
   });
 };
+export const getPendingEmailVerificationTokenForUser = userId => {
+  return client.get({
+    Key: {
+      pk: `user|${userId}`,
+      sk: `user|${userId}`,
+    },
+    applicationContext,
+  });
+};
 
 export const deleteEmails = emails => {
   return Promise.all(
@@ -403,7 +412,6 @@ export const uploadPetition = async (
 };
 
 export const loginAs = (test, user) => {
-  // eslint-disable-next-line jest/expect-expect
   return it(`login as ${user}`, async () => {
     await test.runSequence('updateFormValueSequence', {
       key: 'name',
@@ -413,6 +421,10 @@ export const loginAs = (test, user) => {
     await test.runSequence('submitLoginSequence', {
       path: '/',
     });
+
+    await wait(500);
+
+    expect(test.getState('user.email')).toBeDefined();
   });
 };
 
@@ -489,7 +501,7 @@ export const setupTest = ({ useCases = {} } = {}) => {
       removeItem: () => null,
       setItem: () => null,
     },
-    location: {},
+    location: { replace: jest.fn() },
     open: url => {
       test.setState('openedUrl', url);
     },
@@ -560,7 +572,7 @@ const mockQuery = routeToGoTo => {
   return queryString.parse(paramsString);
 };
 
-export const gotoRoute = (routes, routeToGoTo) => {
+export const gotoRoute = async (routes, routeToGoTo) => {
   for (let route of routes) {
     // eslint-disable-next-line security/detect-non-literal-regexp
     const regex = new RegExp(
