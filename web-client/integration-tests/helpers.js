@@ -32,7 +32,7 @@ import { workQueueHelper as workQueueHelperComputed } from '../src/presenter/com
 import FormDataHelper from 'form-data';
 import axios from 'axios';
 import jwt from 'jsonwebtoken';
-import queryString from 'query-string';
+import qs from 'qs';
 import riotRoute from 'riot-route';
 
 const { CASE_TYPES_MAP, PARTY_TYPES } = applicationContext.getConstants();
@@ -110,7 +110,7 @@ export const getEmailsForAddress = address => {
     applicationContext,
   });
 };
-export const getPendingEmailVerificationTokenForUser = userId => {
+export const getUserRecordById = userId => {
   return client.get({
     Key: {
       pk: `user|${userId}`,
@@ -457,7 +457,6 @@ export const setupTest = ({ useCases = {} } = {}) => {
 
   presenter.providers.applicationContext = applicationContext;
 
-  presenter.providers.applicationContext = applicationContext;
   const {
     initialize: initializeSocketProvider,
     start,
@@ -569,7 +568,7 @@ export const setupTest = ({ useCases = {} } = {}) => {
 
 const mockQuery = routeToGoTo => {
   const paramsString = routeToGoTo.split('?')[1];
-  return queryString.parse(paramsString);
+  return qs.parse(paramsString);
 };
 
 export const gotoRoute = async (routes, routeToGoTo) => {
@@ -647,4 +646,19 @@ export const getPetitionDocumentForCase = caseDetail => {
 export const getPetitionWorkItemForCase = caseDetail => {
   const petitionDocument = getPetitionDocumentForCase(caseDetail);
   return petitionDocument.workItem;
+};
+
+export const getTextByCount = count => {
+  const baseText =
+    'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate efficitur ante, at placerat.';
+  const baseCount = baseText.length;
+
+  let resultText = baseText;
+  if (count > baseCount) {
+    for (let i = 1; i < Math.ceil(count / baseCount); i++) {
+      resultText += baseText;
+    }
+  }
+
+  return resultText.slice(0, count);
 };

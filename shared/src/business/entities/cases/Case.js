@@ -131,8 +131,6 @@ Case.VALIDATION_ERROR_MESSAGES = {
   ],
 };
 
-Case.validationName = 'Case';
-
 /**
  * Case Entity
  * Represents a Case that has already been accepted into the system.
@@ -157,9 +155,6 @@ Case.prototype.init = function init(
     User.isInternalUser(applicationContext.getCurrentUser().role)
   ) {
     this.assignFieldsForInternalUsers({ applicationContext, rawCase });
-    this.assignFieldsForInternalUsersAndOwners({ applicationContext, rawCase });
-  } else if (applicationContext.getCurrentUser().userId === rawCase.userId) {
-    this.assignFieldsForInternalUsersAndOwners({ applicationContext, rawCase });
   }
 
   this.assignDocketEntries({ applicationContext, filtered, rawCase });
@@ -205,12 +200,6 @@ Case.prototype.assignFieldsForInternalUsers = function assignFieldsForInternalUs
   this.assignCorrespondences({ applicationContext, rawCase });
 };
 
-Case.prototype.assignFieldsForInternalUsersAndOwners = function assignFieldsForAllUsers({
-  rawCase,
-}) {
-  this.userId = rawCase.userId;
-};
-
 Case.prototype.assignFieldsForAllUsers = function assignFieldsForAllUsers({
   rawCase,
 }) {
@@ -253,8 +242,8 @@ Case.prototype.assignFieldsForAllUsers = function assignFieldsForAllUsers({
     this.initialCaption = rawCase.initialCaption || this.caseCaption;
   }
 
-  this.hasPendingItems = this.docketEntries.some(
-    docketEntry => docketEntry.pending && isServed(docketEntry),
+  this.hasPendingItems = this.docketEntries.some(docketEntry =>
+    DocketEntry.isPending(docketEntry),
   );
 
   this.noticeOfTrialDate = rawCase.noticeOfTrialDate || createISODateString();
@@ -323,13 +312,6 @@ Case.prototype.assignContacts = function assignContacts({
   applicationContext,
   rawCase,
 }) {
-  if (
-    applicationContext.getCurrentUser().role === ROLES.petitioner &&
-    applicationContext.getCurrentUser().userId === rawCase.userId
-  ) {
-    rawCase.contactPrimary.contactId = rawCase.userId;
-  }
-
   const contacts = ContactFactory.createContacts({
     applicationContext,
     contactInfo: {
@@ -425,11 +407,6 @@ Case.VALIDATION_RULES = {
   automaticBlocked: joi
     .boolean()
     .optional()
-    .when('status', {
-      is: CASE_STATUS_TYPES.calendared,
-      otherwise: joi.optional(),
-      then: joi.invalid(true),
-    })
     .description(
       'Temporarily blocked from trial due to a pending item or due date.',
     ),
@@ -768,9 +745,6 @@ Case.VALIDATION_RULES = {
     .description(
       'Whether to use the same address for the primary and secondary petitioner contact information (used only in data entry and QC process).',
     ),
-  userId: JoiValidationConstants.UUID.required()
-    .meta({ tags: ['Restricted'] })
-    .description('The unique ID of the User who added the case to the system.'),
 };
 
 joiValidationDecorator(
@@ -855,8 +829,8 @@ Case.prototype.toRawObject = function (processPendingItems = true) {
 };
 
 Case.prototype.doesHavePendingItems = function () {
-  return this.docketEntries.some(
-    docketEntry => docketEntry.pending && isServed(docketEntry),
+  return this.docketEntries.some(docketEntry =>
+    DocketEntry.isPending(docketEntry),
   );
 };
 
@@ -982,6 +956,8 @@ Case.prototype.removePrivatePractitioner = function (practitionerToRemove) {
  * @param {object} docketEntryEntity the docket entry to add to the case
  */
 Case.prototype.addDocketEntry = function (docketEntryEntity) {
+  docketEntryEntity.docketNumber = this.docketNumber;
+
   if (docketEntryEntity.isOnDocketRecord) {
     const updateIndex = shouldGenerateDocketRecordIndex({
       caseDetail: this,
@@ -1250,17 +1226,6 @@ Case.prototype.updateDocketEntry = function (updatedDocketEntry) {
   }
 
   return this;
-};
-
-/**
- * stripLeadingZeros
- *
- * @param {string} docketNumber the docket number
- * @returns {string} the updated docket number
- */
-Case.stripLeadingZeros = docketNumber => {
-  const [number, year] = docketNumber.split('-');
-  return `${parseInt(number)}-${year}`;
 };
 
 /**
@@ -1810,15 +1775,14 @@ Case.findLeadCaseForCases = function (cases) {
 };
 
 /**
- * re-formats docket number with any leading zeroes removed
+ * re-formats docket number with any leading zeroes and suffix removed
  *
  * @param {string} docketNumber the docket number to re-format
  * @returns {string} the formatted docket Number
  */
 Case.formatDocketNumber = function formatDocketNumber(docketNumber) {
-  const leadingZeroes = /^0+/;
-  const formattedDocketNumber = docketNumber.replace(leadingZeroes, '');
-  return formattedDocketNumber;
+  const regex = /^0*(\d+-\d{2}).*/;
+  return docketNumber.replace(regex, '$1');
 };
 
 /**

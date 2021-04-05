@@ -255,14 +255,11 @@ const DOCKET_ENTRY_VALIDATION_RULE_KEYS = {
   ).required(),
   qcAt: JoiValidationConstants.ISO_DATE.optional(),
   qcByUserId: JoiValidationConstants.UUID.optional().allow(null),
-  receivedAt: JoiValidationConstants.ISO_DATE.optional(),
+  receivedAt: JoiValidationConstants.ISO_DATE_STRICT.optional(),
   relationship: JoiValidationConstants.STRING.valid(
     ...Object.values(DOCUMENT_RELATIONSHIPS),
   ).optional(),
   scenario: JoiValidationConstants.STRING.valid(...SCENARIOS).optional(),
-  secondaryDate: JoiValidationConstants.ISO_DATE.optional().description(
-    'A secondary date associated with the document, typically related to time-restricted availability. Used to build the document title for TRAN documents.',
-  ),
   secondaryDocument: joi // TODO: limit keys
     .object()
     .keys({
