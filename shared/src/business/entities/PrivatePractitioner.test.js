@@ -1,9 +1,14 @@
 const {
+  CONTACT_TYPES,
   COUNTRY_TYPES,
+  PARTY_TYPES,
   ROLES,
   SERVICE_INDICATOR_TYPES,
   US_STATES,
 } = require('./EntityConstants');
+const { applicationContext } = require('../test/createTestApplicationContext');
+const { Case, getContactPrimary } = require('./cases/Case');
+const { MOCK_CASE } = require('../../test/mockCase');
 const { PrivatePractitioner } = require('./PrivatePractitioner');
 
 describe('PrivatePractitioner', () => {
@@ -185,9 +190,20 @@ describe('PrivatePractitioner', () => {
         userId: '3ab77c88-1dd0-4adb-a03c-c466ad72d417',
       });
 
-      const representingPrimary = privatePractitioner.getRepresentingPrimary({
-        contactPrimary: { contactId: CONTACT_ID },
-      });
+      const representingPrimary = privatePractitioner.getRepresentingPrimary(
+        new Case(
+          {
+            ...MOCK_CASE,
+            petitioners: [
+              {
+                ...getContactPrimary(MOCK_CASE),
+                contactId: CONTACT_ID,
+              },
+            ],
+          },
+          { applicationContext },
+        ),
+      );
 
       expect(representingPrimary).toBeTruthy();
     });
@@ -213,9 +229,20 @@ describe('PrivatePractitioner', () => {
         userId: '3ab77c88-1dd0-4adb-a03c-c466ad72d417',
       });
 
-      const representingPrimary = privatePractitioner.getRepresentingPrimary({
-        contactPrimary: { contactId: '0fa1a4ac-1b91-4fc0-85bf-c0a22be411ad' },
-      });
+      const representingPrimary = privatePractitioner.getRepresentingPrimary(
+        new Case(
+          {
+            ...MOCK_CASE,
+            petitioners: [
+              {
+                ...MOCK_CASE.petitioners[0],
+                contactId: '0fa1a4ac-1b91-4fc0-85bf-c0a22be411ad',
+              },
+            ],
+          },
+          { applicationContext },
+        ),
+      );
 
       expect(representingPrimary).toBeFalsy();
     });
@@ -246,10 +273,25 @@ describe('PrivatePractitioner', () => {
       });
 
       const representingSecondary = privatePractitioner.getRepresentingSecondary(
-        {
-          contactPrimary: { contactId: '152732ec-4d31-4b9b-925b-2b746d9fbf08' },
-          contactSecondary: { contactId: CONTACT_SECONDARY_ID },
-        },
+        new Case(
+          {
+            ...MOCK_CASE,
+            partyType: PARTY_TYPES.petitionerSpouse,
+            petitioners: [
+              {
+                ...getContactPrimary(MOCK_CASE),
+                contactId: '152732ec-4d31-4b9b-925b-2b746d9fbf08',
+                contactType: CONTACT_TYPES.primary,
+              },
+              {
+                ...getContactPrimary(MOCK_CASE),
+                contactId: '53887a7a-9dab-4c75-bab8-8225fb5e30a3',
+                contactType: CONTACT_TYPES.secondary,
+              },
+            ],
+          },
+          { applicationContext },
+        ),
       );
 
       expect(representingSecondary).toBeTruthy();
@@ -277,12 +319,25 @@ describe('PrivatePractitioner', () => {
       });
 
       const representingSecondary = privatePractitioner.getRepresentingSecondary(
-        {
-          contactPrimary: { contactId: '0fa1a4ac-1b91-4fc0-85bf-c0a22be411ad' },
-          contactSecondary: {
-            contactId: '1add3e1d-d00d-4b37-83a9-ca5a6c9960a9',
+        new Case(
+          {
+            ...MOCK_CASE,
+            partyType: PARTY_TYPES.petitionerSpouse,
+            petitioners: [
+              {
+                ...getContactPrimary(MOCK_CASE),
+                contactId: '152732ec-4d31-4b9b-925b-2b746d9fbf08',
+                contactType: CONTACT_TYPES.primary,
+              },
+              {
+                ...getContactPrimary(MOCK_CASE),
+                contactId: '1add3e1d-d00d-4b37-83a9-ca5a6c9960a9',
+                contactType: CONTACT_TYPES.secondary,
+              },
+            ],
           },
-        },
+          { applicationContext },
+        ),
       );
 
       expect(representingSecondary).toBeFalsy();
@@ -313,5 +368,64 @@ describe('PrivatePractitioner', () => {
     );
 
     expect(user.pendingEmailVerificationToken).toBeUndefined();
+  });
+
+  describe('isRepresenting', () => {
+    const mockContactId = '2befbc59-3d02-4268-8c6e-d71a855fea92';
+    const mockOtherContactId = '205cdd73-9eed-44c0-9c73-5801865ffb4b';
+
+    it('returns true when the pracitioner represents the petitioner contactId provided', () => {
+      const user = new PrivatePractitioner(
+        {
+          barNumber: 'BN1234',
+          contact: {
+            address1: '234 Main St',
+            address2: 'Apartment 4',
+            address3: 'Under the stairs',
+            city: 'Chicago',
+            country: 'Brazil',
+            countryType: COUNTRY_TYPES.INTERNATIONAL,
+            phone: '+1 (555) 555-5555',
+            postalCode: '61234',
+            state: 'IL',
+          },
+          name: 'Saul Goodman',
+          pendingEmailVerificationToken: 'aab77c88-1dd0-4adb-a03c-c466ad72d417',
+          representing: [mockContactId],
+          role: ROLES.privatePractitioner,
+          userId: '3ab77c88-1dd0-4adb-a03c-c466ad72d417',
+        },
+        { filtered: true },
+      );
+
+      expect(user.isRepresenting(mockContactId)).toBeTruthy();
+    });
+
+    it('returns false when the pracitioner does not represent the petitioner contactId provided', () => {
+      const user = new PrivatePractitioner(
+        {
+          barNumber: 'BN1234',
+          contact: {
+            address1: '234 Main St',
+            address2: 'Apartment 4',
+            address3: 'Under the stairs',
+            city: 'Chicago',
+            country: 'Brazil',
+            countryType: COUNTRY_TYPES.INTERNATIONAL,
+            phone: '+1 (555) 555-5555',
+            postalCode: '61234',
+            state: 'IL',
+          },
+          name: 'Saul Goodman',
+          pendingEmailVerificationToken: 'aab77c88-1dd0-4adb-a03c-c466ad72d417',
+          representing: [mockContactId],
+          role: ROLES.privatePractitioner,
+          userId: '3ab77c88-1dd0-4adb-a03c-c466ad72d417',
+        },
+        { filtered: true },
+      );
+
+      expect(user.isRepresenting(mockOtherContactId)).toBeFalsy();
+    });
   });
 });

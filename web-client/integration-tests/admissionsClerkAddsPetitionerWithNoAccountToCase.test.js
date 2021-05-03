@@ -1,6 +1,7 @@
 import { DynamoDB } from 'aws-sdk';
 import { applicationContextForClient as applicationContext } from '../../shared/src/business/test/createTestApplicationContext';
 import {
+  contactPrimaryFromState,
   fakeFile,
   getUserRecordById,
   loginAs,
@@ -74,30 +75,37 @@ describe('admissions clerk adds petitioner without existing cognito account to c
   it('admissions clerk adds petitioner email without existing cognito account to case', async () => {
     await refreshElasticsearchIndex();
 
-    await test.runSequence('gotoEditPetitionerInformationSequence', {
+    let contactPrimary = contactPrimaryFromState(test);
+
+    await test.runSequence('gotoEditPetitionerInformationInternalSequence', {
+      contactId: contactPrimary.contactId,
       docketNumber: test.docketNumber,
     });
 
-    expect(test.getState('currentPage')).toEqual('EditPetitionerInformation');
-    expect(test.getState('form.email')).toBeUndefined();
+    expect(test.getState('currentPage')).toEqual(
+      'EditPetitionerInformationInternal',
+    );
+    expect(test.getState('form.updatedEmail')).toBeUndefined();
     expect(test.getState('form.confirmEmail')).toBeUndefined();
 
     await test.runSequence('updateFormValueSequence', {
-      key: 'contactPrimary.email',
+      key: 'contact.updatedEmail',
       value: EMAIL_TO_ADD,
     });
 
     await test.runSequence('updateFormValueSequence', {
-      key: 'contactPrimary.confirmEmail',
+      key: 'contact.confirmEmail',
       value: EMAIL_TO_ADD,
     });
 
-    await test.runSequence('updatePetitionerInformationFormSequence');
+    await test.runSequence('submitEditPetitionerSequence');
 
     expect(test.getState('validationErrors')).toEqual({});
 
     expect(test.getState('modal.showModal')).toBe('NoMatchingEmailFoundModal');
-    expect(test.getState('currentPage')).toEqual('EditPetitionerInformation');
+    expect(test.getState('currentPage')).toEqual(
+      'EditPetitionerInformationInternal',
+    );
 
     await test.runSequence(
       'submitUpdatePetitionerInformationFromModalSequence',
@@ -106,12 +114,14 @@ describe('admissions clerk adds petitioner without existing cognito account to c
     expect(test.getState('modal.showModal')).toBeUndefined();
     expect(test.getState('currentPage')).toEqual('CaseDetailInternal');
 
-    expect(test.getState('caseDetail.contactPrimary.email')).toBeUndefined();
-    expect(test.getState('caseDetail.contactPrimary.serviceIndicator')).toEqual(
+    contactPrimary = contactPrimaryFromState(test);
+
+    expect(contactPrimary.email).toBeUndefined();
+    expect(contactPrimary.serviceIndicator).toEqual(
       SERVICE_INDICATOR_TYPES.SI_PAPER,
     );
 
-    test.userId = test.getState('caseDetail.contactPrimary.contactId');
+    test.userId = contactPrimary.contactId;
 
     await refreshElasticsearchIndex();
   });
@@ -128,10 +138,10 @@ describe('admissions clerk adds petitioner without existing cognito account to c
 
     expect(test.getState('currentPage')).toEqual('CaseDetailInternal');
 
-    expect(test.getState('caseDetail.contactPrimary.email')).toEqual(
-      EMAIL_TO_ADD,
-    );
-    expect(test.getState('caseDetail.contactPrimary.serviceIndicator')).toEqual(
+    const contactPrimary = contactPrimaryFromState(test);
+
+    expect(contactPrimary.email).toEqual(EMAIL_TO_ADD);
+    expect(contactPrimary.serviceIndicator).toEqual(
       SERVICE_INDICATOR_TYPES.SI_ELECTRONIC,
     );
   });

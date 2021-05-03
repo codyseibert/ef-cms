@@ -2,9 +2,15 @@ const {
   applicationContext,
 } = require('../../test/createTestApplicationContext');
 const {
+  CASE_STATUS_TYPES,
+  CONTACT_TYPES,
   ROLES,
   SERVICE_INDICATOR_TYPES,
 } = require('../../entities/EntityConstants');
+const {
+  getContactPrimary,
+  getContactSecondary,
+} = require('../../entities/cases/Case');
 const {
   setUserEmailFromPendingEmailInteractor,
 } = require('./setUserEmailFromPendingEmailInteractor');
@@ -20,32 +26,28 @@ describe('setUserEmailFromPendingEmailInteractor', () => {
   beforeEach(() => {
     mockUser = {
       ...validUser,
-      admissionsDate: '2019-03-01',
-      admissionsStatus: 'Active',
-      barNumber: 'RA3333',
       birthYear: '1950',
       email: undefined,
-      employer: 'Private',
       firstName: 'Alden',
       lastName: 'Rivas',
       name: 'Alden Rivas',
-      originalBarState: 'Florida',
       pendingEmail: UPDATED_EMAIL,
-      practitionerType: 'Attorney',
-      role: ROLES.privatePractitioner,
+      role: ROLES.petitioner,
       userId: USER_ID,
     };
 
     userCases = [
       {
         ...MOCK_CASE,
-        contactPrimary: {
-          ...MOCK_CASE.contactPrimary,
-          contactId: USER_ID,
-          email: undefined,
-          serviceIndicator: SERVICE_INDICATOR_TYPES.SI_PAPER,
-        },
         docketNumber: '101-21',
+        petitioners: [
+          {
+            ...getContactPrimary(MOCK_CASE),
+            contactId: USER_ID,
+            email: undefined,
+            serviceIndicator: SERVICE_INDICATOR_TYPES.SI_PAPER,
+          },
+        ],
       },
     ];
 
@@ -79,21 +81,60 @@ describe('setUserEmailFromPendingEmailInteractor', () => {
     });
   });
 
-  it('should update the user cases with the new email and electronic service', async () => {
+  it('should update the user cases with the new email and electronic service for the contact primary', async () => {
     await setUserEmailFromPendingEmailInteractor({
       applicationContext,
       user: mockUser,
     });
 
+    const {
+      caseToUpdate,
+    } = applicationContext.getUseCaseHelpers().updateCaseAndAssociations.mock.calls[0][0];
+
     expect(applicationContext.logger.error).not.toBeCalled();
-    expect(
-      applicationContext.getUseCaseHelpers().updateCaseAndAssociations.mock
-        .calls[0][0].caseToUpdate,
-    ).toMatchObject({
-      contactPrimary: {
-        email: UPDATED_EMAIL,
-        serviceIndicator: SERVICE_INDICATOR_TYPES.SI_ELECTRONIC,
+    expect(getContactPrimary(caseToUpdate)).toMatchObject({
+      email: UPDATED_EMAIL,
+      serviceIndicator: SERVICE_INDICATOR_TYPES.SI_ELECTRONIC,
+    });
+  });
+
+  it('should update the user cases with the new email and electronic service for the contact secondary', async () => {
+    userCases = [
+      {
+        ...MOCK_CASE,
+        docketNumber: '101-21',
+        petitioners: [
+          {
+            ...getContactPrimary(MOCK_CASE),
+            serviceIndicator: SERVICE_INDICATOR_TYPES.SI_PAPER,
+          },
+          {
+            ...getContactPrimary(MOCK_CASE),
+            contactId: USER_ID,
+            contactType: CONTACT_TYPES.secondary,
+            email: undefined,
+            serviceIndicator: SERVICE_INDICATOR_TYPES.SI_PAPER,
+          },
+        ],
+        status: CASE_STATUS_TYPES.generalDocket,
       },
+    ];
+
+    mockUser.role = ROLES.petitioner;
+
+    await setUserEmailFromPendingEmailInteractor({
+      applicationContext,
+      user: mockUser,
+    });
+
+    const {
+      caseToUpdate,
+    } = applicationContext.getUseCaseHelpers().updateCaseAndAssociations.mock.calls[0][0];
+
+    expect(applicationContext.logger.error).not.toBeCalled();
+    expect(getContactSecondary(caseToUpdate)).toMatchObject({
+      email: UPDATED_EMAIL,
+      serviceIndicator: SERVICE_INDICATOR_TYPES.SI_ELECTRONIC,
     });
   });
 
@@ -101,12 +142,14 @@ describe('setUserEmailFromPendingEmailInteractor', () => {
     userCases = [
       {
         ...MOCK_CASE,
-        contactPrimary: {
-          ...MOCK_CASE.contactPrimary,
-          email: undefined,
-          serviceIndicator: SERVICE_INDICATOR_TYPES.SI_PAPER,
-        },
         docketNumber: '101-21',
+        petitioners: [
+          {
+            ...getContactPrimary(MOCK_CASE),
+            email: undefined,
+            serviceIndicator: SERVICE_INDICATOR_TYPES.SI_PAPER,
+          },
+        ],
       },
     ];
 
@@ -124,22 +167,26 @@ describe('setUserEmailFromPendingEmailInteractor', () => {
     userCases = [
       {
         ...MOCK_CASE,
-        contactPrimary: {
-          ...MOCK_CASE.contactPrimary,
-          contactId: USER_ID,
-          email: undefined,
-          serviceIndicator: SERVICE_INDICATOR_TYPES.SI_PAPER,
-        },
         docketNumber: '101-21',
+        petitioners: [
+          {
+            ...getContactPrimary(MOCK_CASE),
+            contactId: USER_ID,
+            email: undefined,
+            serviceIndicator: SERVICE_INDICATOR_TYPES.SI_PAPER,
+          },
+        ],
       },
       {
         ...MOCK_CASE,
-        contactPrimary: {
-          ...MOCK_CASE.contactPrimary,
-          email: undefined,
-          serviceIndicator: SERVICE_INDICATOR_TYPES.SI_PAPER,
-        },
         docketNumber: '105-21',
+        petitioners: [
+          {
+            ...getContactPrimary(MOCK_CASE),
+            email: undefined,
+            serviceIndicator: SERVICE_INDICATOR_TYPES.SI_PAPER,
+          },
+        ],
       },
     ];
 
@@ -163,17 +210,19 @@ describe('setUserEmailFromPendingEmailInteractor', () => {
       user: mockUser,
     });
 
+    const {
+      caseToUpdate,
+    } = applicationContext.getUseCaseHelpers().updateCaseAndAssociations.mock.calls[0][0];
+
     expect(
       applicationContext.getUseCaseHelpers().updateCaseAndAssociations,
     ).toHaveBeenCalledTimes(1);
-    expect(
-      applicationContext.getUseCaseHelpers().updateCaseAndAssociations.mock
-        .calls[0][0].caseToUpdate,
-    ).toMatchObject({
-      contactPrimary: {
-        email: UPDATED_EMAIL,
-        serviceIndicator: SERVICE_INDICATOR_TYPES.SI_ELECTRONIC,
-      },
+
+    expect(getContactPrimary(caseToUpdate)).toMatchObject({
+      email: UPDATED_EMAIL,
+      serviceIndicator: SERVICE_INDICATOR_TYPES.SI_ELECTRONIC,
+    });
+    expect(caseToUpdate).toMatchObject({
       docketNumber: '101-21',
     });
   });

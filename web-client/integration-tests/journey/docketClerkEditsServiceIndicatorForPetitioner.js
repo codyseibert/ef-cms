@@ -1,44 +1,52 @@
 import { SERVICE_INDICATOR_TYPES } from '../../../shared/src/business/entities/EntityConstants';
+import { contactPrimaryFromState } from '../helpers';
 
 export const docketClerkEditsServiceIndicatorForPetitioner = (
   test,
   expectedServiceIndicator = null,
 ) => {
   return it('docket clerk edits service indicator for a petitioner', async () => {
-    await test.runSequence('gotoEditPetitionerInformationSequence', {
+    let contactPrimary = contactPrimaryFromState(test);
+
+    await test.runSequence('gotoEditPetitionerInformationInternalSequence', {
+      contactId: contactPrimary.contactId,
       docketNumber: test.docketNumber,
     });
 
-    expect(test.getState('form.contactPrimary.serviceIndicator')).toEqual(
+    expect(test.getState('form.contact.serviceIndicator')).toEqual(
       expectedServiceIndicator || SERVICE_INDICATOR_TYPES.SI_NONE,
     );
 
     await test.runSequence('updateFormValueSequence', {
-      key: 'contactPrimary.serviceIndicator',
+      key: 'contact.serviceIndicator',
       value: SERVICE_INDICATOR_TYPES.SI_ELECTRONIC,
     });
 
     if (!expectedServiceIndicator) {
-      await test.runSequence('updatePetitionerInformationFormSequence');
+      await test.runSequence('submitEditPetitionerSequence');
       expect(test.getState('validationErrors')).toMatchObject({
-        contactPrimary: {
+        contact: {
           serviceIndicator: expect.anything(),
         },
       });
 
-      expect(
-        test.getState('caseDetail.contactPrimary.serviceIndicator'),
-      ).toEqual(SERVICE_INDICATOR_TYPES.SI_NONE);
+      const contactPrimary = contactPrimaryFromState(test);
+
+      expect(contactPrimary.serviceIndicator).toEqual(
+        SERVICE_INDICATOR_TYPES.SI_NONE,
+      );
     }
 
     await test.runSequence('updateFormValueSequence', {
-      key: 'contactPrimary.serviceIndicator',
+      key: 'contact.serviceIndicator',
       value: SERVICE_INDICATOR_TYPES.SI_PAPER,
     });
 
-    await test.runSequence('updatePetitionerInformationFormSequence');
+    await test.runSequence('submitEditPetitionerSequence');
 
-    expect(test.getState('caseDetail.contactPrimary.serviceIndicator')).toEqual(
+    contactPrimary = contactPrimaryFromState(test);
+
+    expect(contactPrimary.serviceIndicator).toEqual(
       SERVICE_INDICATOR_TYPES.SI_PAPER,
     );
   });

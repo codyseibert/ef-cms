@@ -15,21 +15,20 @@ export const validatePetitionerInformationFormAction = ({
   get,
   path,
 }) => {
-  let SERVICE_INDICATOR_TYPES;
-
-  ({ SERVICE_INDICATOR_TYPES } = applicationContext.getConstants());
+  const {
+    SERVICE_INDICATOR_ERROR,
+    SERVICE_INDICATOR_TYPES,
+  } = applicationContext.getConstants();
 
   const { contactPrimary, contactSecondary, partyType } = get(state.form);
 
-  const {
-    contactPrimary: oldContactPrimary,
-    contactSecondary: oldContactSecondary,
-  } = get(state.caseDetail);
+  const caseDetail = get(state.caseDetail);
 
-  const serviceIndicatorError = {
-    serviceIndicator:
-      'You cannot change from paper to electronic service. Select a valid service preference.',
-  };
+  const oldContactPrimary = applicationContext
+    .getUtilities()
+    .getContactPrimary(caseDetail);
+
+  const { contactSecondary: oldContactSecondary } = caseDetail;
 
   const errors = applicationContext
     .getUseCases()
@@ -56,7 +55,6 @@ export const validatePetitionerInformationFormAction = ({
       ...errorsContactPrimary,
     };
   }
-
   if (
     [
       SERVICE_INDICATOR_TYPES.SI_PAPER,
@@ -66,7 +64,7 @@ export const validatePetitionerInformationFormAction = ({
   ) {
     errors.contactPrimary = {
       ...errors.contactPrimary,
-      ...serviceIndicatorError,
+      ...SERVICE_INDICATOR_ERROR,
     };
   }
 
@@ -80,7 +78,7 @@ export const validatePetitionerInformationFormAction = ({
   ) {
     errors.contactSecondary = {
       ...errors.contactSecondary,
-      ...serviceIndicatorError,
+      ...SERVICE_INDICATOR_ERROR,
     };
   }
 

@@ -16,15 +16,22 @@ export const editPetitionerInformationHelper = (get, applicationContext) => {
   const userPendingEmail = get(state.screenMetadata.userPendingEmail);
   const showEditEmail = permissions.EDIT_PETITIONER_EMAIL && !userPendingEmail;
 
-  const contactPrimaryEmail = get(state.caseDetail.contactPrimary.email);
+  const caseDetail = get(state.caseDetail);
+  const contactPrimaryEmail = applicationContext
+    .getUtilities()
+    .getContactPrimary(caseDetail)?.email;
 
   const contactPrimaryHasEmail = !!contactPrimaryEmail;
+
+  const showRemovePetitionerButton =
+    caseDetail.petitioners.length > 1 && permissions.REMOVE_PETITIONER;
 
   return {
     contactPrimaryHasEmail,
     partyTypes: PARTY_TYPES,
     showEditEmail,
     showPrimaryContact: showContacts.contactPrimary,
+    showRemovePetitionerButton,
     showSecondaryContact: showContacts.contactSecondary,
     userPendingEmail,
   };

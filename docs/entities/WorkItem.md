@@ -93,7 +93,6 @@
       flags: 
         format: 
           - "YYYY-MM-DDTHH:mm:ss.SSSZ"
-          - "YYYY-MM-DD"
         presence: "optional"
     completedBy: 
       type: "string"
@@ -147,7 +146,6 @@
       flags: 
         format: 
           - "YYYY-MM-DDTHH:mm:ss.SSSZ"
-          - "YYYY-MM-DD"
         presence: "optional"
     docketEntry: 
       type: "object"
@@ -212,69 +210,12 @@
     section: 
       type: "string"
       flags: 
-        only: true
         presence: "required"
       rules: 
         - 
           name: "min"
           args: 
             limit: 1
-      allow: 
-        - "adc"
-        - "admissions"
-        - "chambers"
-        - "clerkofcourt"
-        - "docket"
-        - "floater"
-        - "petitions"
-        - "reportersOffice"
-        - "trialClerks"
-        - "ashfordsChambers"
-        - "buchsChambers"
-        - "carluzzosChambers"
-        - "cohensChambers"
-        - "colvinsChambers"
-        - "copelandsChambers"
-        - "foleysChambers"
-        - "galesChambers"
-        - "goekesChambers"
-        - "greavesChambers"
-        - "gustafsonsChambers"
-        - "guysChambers"
-        - "halpernsChambers"
-        - "holmesChambers"
-        - "jonesChambers"
-        - "kerrigansChambers"
-        - "laubersChambers"
-        - "leydensChambers"
-        - "marshallsChambers"
-        - "marvelsChambers"
-        - "morrisonsChambers"
-        - "negasChambers"
-        - "panuthosChambers"
-        - "parisChambers"
-        - "pughsChambers"
-        - "ruwesChambers"
-        - "thorntonsChambers"
-        - "torosChambers"
-        - "urdasChambers"
-        - "vasquezsChambers"
-        - "weilersChambers"
-        - "wellsChambers"
-        - "admin"
-        - "admissionsclerk"
-        - "docketclerk"
-        - "general"
-        - "inactivePractitioner"
-        - "irsPractitioner"
-        - "irsSuperuser"
-        - "judge"
-        - "legacyJudge"
-        - "petitioner"
-        - "petitionsclerk"
-        - "privatePractitioner"
-        - "trialclerk"
-        - "irsSystem"
     sentBy: 
       type: "string"
       flags: 
@@ -292,68 +233,12 @@
     sentBySection: 
       type: "string"
       flags: 
-        only: true
         presence: "optional"
       rules: 
         - 
           name: "min"
           args: 
             limit: 1
-      allow: 
-        - "adc"
-        - "admissions"
-        - "chambers"
-        - "clerkofcourt"
-        - "docket"
-        - "floater"
-        - "petitions"
-        - "reportersOffice"
-        - "trialClerks"
-        - "ashfordsChambers"
-        - "buchsChambers"
-        - "carluzzosChambers"
-        - "cohensChambers"
-        - "colvinsChambers"
-        - "copelandsChambers"
-        - "foleysChambers"
-        - "galesChambers"
-        - "goekesChambers"
-        - "greavesChambers"
-        - "gustafsonsChambers"
-        - "guysChambers"
-        - "halpernsChambers"
-        - "holmesChambers"
-        - "jonesChambers"
-        - "kerrigansChambers"
-        - "laubersChambers"
-        - "leydensChambers"
-        - "marshallsChambers"
-        - "marvelsChambers"
-        - "morrisonsChambers"
-        - "negasChambers"
-        - "panuthosChambers"
-        - "parisChambers"
-        - "pughsChambers"
-        - "ruwesChambers"
-        - "thorntonsChambers"
-        - "torosChambers"
-        - "urdasChambers"
-        - "vasquezsChambers"
-        - "weilersChambers"
-        - "wellsChambers"
-        - "admin"
-        - "admissionsclerk"
-        - "docketclerk"
-        - "general"
-        - "inactivePractitioner"
-        - "irsPractitioner"
-        - "irsSuperuser"
-        - "judge"
-        - "legacyJudge"
-        - "petitioner"
-        - "petitionsclerk"
-        - "privatePractitioner"
-        - "trialclerk"
     sentByUserId: 
       type: "string"
       flags: 
@@ -374,7 +259,6 @@
       flags: 
         format: 
           - "YYYY-MM-DDTHH:mm:ss.SSSZ"
-          - "YYYY-MM-DD"
         presence: "optional"
       allow: 
         - null
@@ -383,7 +267,6 @@
       flags: 
         format: 
           - "YYYY-MM-DDTHH:mm:ss.SSSZ"
-          - "YYYY-MM-DD"
         presence: "required"
     workItemId: 
       type: "string"

@@ -1,9 +1,20 @@
-import { ROLES } from '../../../../shared/src/business/entities/EntityConstants';
-import { caseInformationHelper } from './caseInformationHelper';
+import {
+  CASE_STATUS_TYPES,
+  CONTACT_TYPES,
+  ROLES,
+} from '../../../../shared/src/business/entities/EntityConstants';
+import { applicationContextForClient as applicationContext } from '../../../../shared/src/business/test/createTestApplicationContext';
+import { caseInformationHelper as caseInformationHelperComputed } from './caseInformationHelper';
 import { getUserPermissions } from '../../../../shared/src/authorization/getUserPermissions';
 import { runCompute } from 'cerebral/test';
+import { withAppContextDecorator } from '../../withAppContext';
 
-describe('case information helper', () => {
+describe('caseInformationHelper', () => {
+  const caseInformationHelper = withAppContextDecorator(
+    caseInformationHelperComputed,
+    applicationContext,
+  );
+
   const getBaseState = user => {
     return {
       permissions: getUserPermissions(user),
@@ -18,7 +29,9 @@ describe('case information helper', () => {
     const result = runCompute(caseInformationHelper, {
       state: {
         ...getBaseState(user),
-        caseDetail: {},
+        caseDetail: {
+          petitioners: [],
+        },
         form: {},
       },
     });
@@ -35,6 +48,7 @@ describe('case information helper', () => {
         ...getBaseState(user),
         caseDetail: {
           hearings: [{ trialSessionId: 'trial-id-123' }],
+          petitioners: [],
         },
         form: {},
       },
@@ -52,6 +66,7 @@ describe('case information helper', () => {
         ...getBaseState(user),
         caseDetail: {
           hearings: [],
+          petitioners: [],
         },
         form: {},
       },
@@ -67,7 +82,9 @@ describe('case information helper', () => {
     const result = runCompute(caseInformationHelper, {
       state: {
         ...getBaseState(user),
-        caseDetail: {},
+        caseDetail: {
+          petitioners: [],
+        },
         form: {},
       },
     });
@@ -84,6 +101,7 @@ describe('case information helper', () => {
         ...getBaseState(user),
         caseDetail: {
           irsPractitioners: [{ userId: '2' }],
+          petitioners: [],
           privatePractitioners: [{ userId: '1' }],
         },
         form: {},
@@ -101,7 +119,9 @@ describe('case information helper', () => {
     const result = runCompute(caseInformationHelper, {
       state: {
         ...getBaseState(user),
-        caseDetail: {},
+        caseDetail: {
+          petitioners: [],
+        },
         form: {},
       },
     });
@@ -119,6 +139,7 @@ describe('case information helper', () => {
         ...getBaseState(user),
         caseDetail: {
           irsPractitioners: [{ userId: '2' }],
+          petitioners: [],
           privatePractitioners: [{ userId: '1' }],
         },
         form: {},
@@ -136,7 +157,9 @@ describe('case information helper', () => {
     const result = runCompute(caseInformationHelper, {
       state: {
         ...getBaseState(user),
-        caseDetail: {},
+        caseDetail: {
+          petitioners: [],
+        },
         form: {},
       },
     });
@@ -151,7 +174,9 @@ describe('case information helper', () => {
     const result = runCompute(caseInformationHelper, {
       state: {
         ...getBaseState(user),
-        caseDetail: {},
+        caseDetail: {
+          petitioners: [],
+        },
         form: {},
       },
     });
@@ -166,7 +191,7 @@ describe('case information helper', () => {
     const result = runCompute(caseInformationHelper, {
       state: {
         ...getBaseState(user),
-        caseDetail: { isSealed: true },
+        caseDetail: { isSealed: true, petitioners: [] },
         form: {},
       },
     });
@@ -204,6 +229,9 @@ describe('case information helper', () => {
       const result = runCompute(caseInformationHelper, {
         state: {
           ...baseState,
+          caseDetail: {
+            petitioners: [],
+          },
           showingAdditionalPetitioners: false,
         },
       });
@@ -211,36 +239,25 @@ describe('case information helper', () => {
       expect(result.toggleAdditionalPetitionersDisplay).toEqual('View');
     });
 
-    it('does not paginate (or show) other petitioners if it is non-existent', () => {
-      const result = runCompute(caseInformationHelper, {
-        state: {
-          ...baseState,
-        },
-      });
-
-      expect(result.formattedOtherPetitioners).toEqual([]);
-      expect(result.showOtherPetitioners).toEqual(false);
-    });
-
-    it('paginates if showingAdditionalPetitioners is false', () => {
+    it('paginates and shows four petitioner if showingAdditionalPetitioners is false', () => {
       const result = runCompute(caseInformationHelper, {
         state: {
           ...baseState,
           caseDetail: {
-            otherPetitioners: [
-              { a: '1' },
-              { a: '1' },
-              { a: '1' },
-              { a: '1' },
-              { a: '1' },
+            petitioners: [
+              { a: '1', contactType: CONTACT_TYPES.primary },
+              { a: '1', contactType: CONTACT_TYPES.secondary },
+              { a: '1', contactType: CONTACT_TYPES.otherPetitioner },
+              { a: '1', contactType: CONTACT_TYPES.otherPetitioner },
+              { a: '1', contactType: CONTACT_TYPES.otherPetitioner },
+              { a: '1', contactType: CONTACT_TYPES.otherPetitioner },
             ],
           },
           showingAdditionalPetitioners: false,
         },
       });
 
-      expect(result.formattedOtherPetitioners.length).toEqual(4);
-      expect(result.showOtherPetitioners).toEqual(true);
+      expect(result.formattedPetitioners.length).toEqual(4);
     });
 
     it('does not paginate (shows all) if showingAdditionalPetitioners is true', () => {
@@ -248,20 +265,21 @@ describe('case information helper', () => {
         state: {
           ...baseState,
           caseDetail: {
-            otherPetitioners: [
-              { a: '1' },
-              { a: '1' },
-              { a: '1' },
-              { a: '1' },
-              { a: '1' },
+            petitioners: [
+              { a: '1', contactType: CONTACT_TYPES.primary },
+              { a: '1', contactType: CONTACT_TYPES.otherPetitioner },
+              { a: '1', contactType: CONTACT_TYPES.otherPetitioner },
+              { a: '1', contactType: CONTACT_TYPES.otherPetitioner },
+              { a: '1', contactType: CONTACT_TYPES.otherPetitioner },
+              { a: '1', contactType: CONTACT_TYPES.otherPetitioner },
+              { a: '1', contactType: CONTACT_TYPES.otherPetitioner },
             ],
           },
           showingAdditionalPetitioners: true,
         },
       });
 
-      expect(result.formattedOtherPetitioners.length).toEqual(5);
-      expect(result.showOtherPetitioners).toEqual(true);
+      expect(result.formattedPetitioners.length).toEqual(7);
     });
   });
 
@@ -274,7 +292,9 @@ describe('case information helper', () => {
       const result = runCompute(caseInformationHelper, {
         state: {
           ...getBaseState(user),
-          caseDetail: {},
+          caseDetail: {
+            petitioners: [],
+          },
           form: {},
         },
       });
@@ -289,7 +309,9 @@ describe('case information helper', () => {
       const result = runCompute(caseInformationHelper, {
         state: {
           ...getBaseState(user),
-          caseDetail: {},
+          caseDetail: {
+            petitioners: [],
+          },
           form: {},
         },
       });
@@ -297,41 +319,172 @@ describe('case information helper', () => {
     });
   });
 
-  describe('showEmail', () => {
+  describe('contactPrimaryEmailFormatted', () => {
     const mockEmail = 'error@example.com';
     const user = {
       role: ROLES.petitioner,
       userId: '789',
     };
 
-    it('should be true when the case contact primary has an email', () => {
-      const { showEmail } = runCompute(caseInformationHelper, {
-        state: {
-          ...getBaseState(user),
-          caseDetail: {
-            contactPrimary: {
-              email: mockEmail,
+    it('should display the case contact primary email when it is defined', () => {
+      const { contactPrimaryEmailFormatted } = runCompute(
+        caseInformationHelper,
+        {
+          state: {
+            ...getBaseState(user),
+            caseDetail: {
+              petitioners: [
+                {
+                  contactType: CONTACT_TYPES.primary,
+                  email: mockEmail,
+                },
+              ],
             },
+            form: {},
           },
-          form: {},
         },
-      });
-      expect(showEmail).toBeTruthy();
+      );
+      expect(contactPrimaryEmailFormatted).toBe(mockEmail);
     });
 
-    it('should be false when the case contact primary does not have an email', () => {
-      const { showEmail } = runCompute(caseInformationHelper, {
+    it('should display `Not provided` when the case contact primary does not have an email', () => {
+      const { contactPrimaryEmailFormatted } = runCompute(
+        caseInformationHelper,
+        {
+          state: {
+            ...getBaseState(user),
+            caseDetail: {
+              petitioners: [
+                {
+                  contactType: CONTACT_TYPES.primary,
+                  pendingEmail: mockEmail,
+                },
+              ],
+            },
+            form: {},
+          },
+        },
+      );
+      expect(contactPrimaryEmailFormatted).toBe('Not provided');
+    });
+  });
+
+  describe('contactSecondaryEmailFormatted', () => {
+    const mockEmail = 'error@example.com';
+    const user = {
+      role: ROLES.petitioner,
+      userId: '789',
+    };
+
+    it('should be true when the case contact secondary has an email', () => {
+      const mockEmailSecondary = 'petitioner2@example.com';
+      const { contactSecondaryEmailFormatted } = runCompute(
+        caseInformationHelper,
+        {
+          state: {
+            ...getBaseState(user),
+            caseDetail: {
+              petitioners: [
+                {
+                  contactType: CONTACT_TYPES.primary,
+                },
+                {
+                  contactType: CONTACT_TYPES.secondary,
+                  email: mockEmailSecondary,
+                },
+              ],
+            },
+            form: {},
+          },
+        },
+      );
+      expect(contactSecondaryEmailFormatted).toBe(mockEmailSecondary);
+    });
+
+    it('should be false when the case contact secondary does not have an email', () => {
+      const { contactSecondaryEmailFormatted } = runCompute(
+        caseInformationHelper,
+        {
+          state: {
+            ...getBaseState(user),
+            caseDetail: {
+              petitioners: [
+                {
+                  contactType: CONTACT_TYPES.primary,
+                },
+                {
+                  contactType: CONTACT_TYPES.secondary,
+                  pendingEmail: mockEmail,
+                },
+              ],
+            },
+            form: {},
+          },
+        },
+      );
+      expect(contactSecondaryEmailFormatted).toBe('Not provided');
+    });
+  });
+
+  describe('showAddPetitionerButton', () => {
+    it('should be true when case status is not new and user has ADD_PETITIONER_TO_CASE permission', () => {
+      const user = {
+        role: ROLES.docketClerk,
+        userId: '789',
+      };
+
+      const { showAddPetitionerButton } = runCompute(caseInformationHelper, {
         state: {
           ...getBaseState(user),
           caseDetail: {
-            contactPrimary: {
-              pendingEmail: mockEmail,
-            },
+            petitioners: [],
+            status: CASE_STATUS_TYPES.generalDocket,
           },
           form: {},
         },
       });
-      expect(showEmail).toBeFalsy();
+
+      expect(showAddPetitionerButton).toBeTruthy();
+    });
+
+    it('should be false when case status is new and user has ADD_PETITIONER_TO_CASE permission', () => {
+      const user = {
+        role: ROLES.docketClerk,
+        userId: '789',
+      };
+
+      const { showAddPetitionerButton } = runCompute(caseInformationHelper, {
+        state: {
+          ...getBaseState(user),
+          caseDetail: {
+            petitioners: [],
+            status: CASE_STATUS_TYPES.new,
+          },
+          form: {},
+        },
+      });
+
+      expect(showAddPetitionerButton).toBeFalsy();
+    });
+
+    it('should be false when case status is not new and user does not have ADD_PETITIONER_TO_CASE permission', () => {
+      const user = {
+        role: ROLES.petitionsClerk,
+        userId: '789',
+      };
+
+      const { showAddPetitionerButton } = runCompute(caseInformationHelper, {
+        state: {
+          ...getBaseState(user),
+          caseDetail: {
+            petitioners: [],
+            status: CASE_STATUS_TYPES.generalDocket,
+          },
+          form: {},
+        },
+      });
+
+      expect(showAddPetitionerButton).toBeFalsy();
     });
   });
 });

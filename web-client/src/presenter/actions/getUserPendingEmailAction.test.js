@@ -11,16 +11,12 @@ describe('getUserPendingEmailAction', () => {
     presenter.providers.applicationContext = applicationContext;
   });
 
-  it('should make a call to getUserPendingEmailInteractor with caseDetail.contactPrimary.contactId', async () => {
+  it('should make a call to getUserPendingEmailInteractor with props.contactId', async () => {
     await runAction(getUserPendingEmailAction, {
       modules: {
         presenter,
       },
-      state: {
-        caseDetail: {
-          contactPrimary: { contactId: mockUserId },
-        },
-      },
+      props: { contactId: mockUserId },
     });
 
     expect(
@@ -38,11 +34,7 @@ describe('getUserPendingEmailAction', () => {
       modules: {
         presenter,
       },
-      state: {
-        caseDetail: {
-          contactPrimary: { contactId: mockUserId },
-        },
-      },
+      props: { contactId: mockUserId },
     });
 
     expect(output.userPendingEmail).toBe(mockEmail);
@@ -57,11 +49,7 @@ describe('getUserPendingEmailAction', () => {
       modules: {
         presenter,
       },
-      state: {
-        caseDetail: {
-          contactPrimary: { contactId: mockUserId },
-        },
-      },
+      props: { contactId: mockUserId },
     });
 
     expect(output.userPendingEmail).toBeUndefined();

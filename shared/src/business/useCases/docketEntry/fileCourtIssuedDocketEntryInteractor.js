@@ -80,6 +80,7 @@ exports.fileCourtIssuedDocketEntryInteractor = async (
       numberOfPages,
       scenario: documentMeta.scenario,
       serviceStamp: documentMeta.serviceStamp,
+      trialLocation: documentMeta.trialLocation,
       userId: user.userId,
     },
     { applicationContext },
@@ -92,7 +93,7 @@ exports.fileCourtIssuedDocketEntryInteractor = async (
       associatedJudge: caseToUpdate.associatedJudge,
       caseIsInProgress: caseEntity.inProgress,
       caseStatus: caseToUpdate.status,
-      caseTitle: Case.getCaseTitle(Case.getCaseCaption(caseEntity)),
+      caseTitle: Case.getCaseTitle(caseEntity.caseCaption),
       docketEntry: {
         ...docketEntryEntity.toRawObject(),
         createdAt: docketEntryEntity.createdAt,

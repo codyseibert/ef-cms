@@ -158,10 +158,8 @@ exports.fileExternalDocumentForConsolidatedInteractor = async (
         const docketEntryEntity = new DocketEntry(
           {
             ...rawDocument,
-            ...caseEntity.getCaseContacts({
-              contactPrimary: true,
-              contactSecondary: true,
-            }),
+            contactPrimary: caseEntity.getContactPrimary(),
+            contactSecondary: caseEntity.getContactSecondary(),
           },
           {
             applicationContext,
@@ -186,7 +184,7 @@ exports.fileExternalDocumentForConsolidatedInteractor = async (
                 associatedJudge: caseEntity.associatedJudge,
                 caseIsInProgress: caseEntity.inProgress,
                 caseStatus: caseEntity.status,
-                caseTitle: Case.getCaseTitle(Case.getCaseCaption(caseEntity)),
+                caseTitle: Case.getCaseTitle(caseEntity.caseCaption),
                 docketEntry: {
                   ...docketEntryEntity.toRawObject(),
                   createdAt: docketEntryEntity.createdAt,

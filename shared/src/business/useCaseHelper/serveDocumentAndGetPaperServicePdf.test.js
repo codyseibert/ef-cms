@@ -5,7 +5,7 @@ const {
 const {
   serveDocumentAndGetPaperServicePdf,
 } = require('./serveDocumentAndGetPaperServicePdf');
-const { Case } = require('../entities/cases/Case');
+const { Case, getContactPrimary } = require('../entities/cases/Case');
 const { MOCK_CASE } = require('../../test/mockCase');
 const { SERVICE_INDICATOR_TYPES } = require('../entities/EntityConstants');
 
@@ -47,9 +47,13 @@ describe('serveDocumentAndGetPaperServicePdf', () => {
   });
 
   it('should not call getObject or appendPaperServiceAddressPageToPdf if there are no paper service parties on the case', async () => {
+    caseEntity.petitioners.forEach(
+      p => (p.serviceIndicator = SERVICE_INDICATOR_TYPES.SI_ELECTRONIC),
+    );
+
     await serveDocumentAndGetPaperServicePdf({
       applicationContext,
-      caseEntity, // MOCK_CASE does not have any paper service parties
+      caseEntity,
       docketEntryId: mockDocketEntryId,
     });
 
@@ -63,10 +67,12 @@ describe('serveDocumentAndGetPaperServicePdf', () => {
     caseEntity = new Case(
       {
         ...MOCK_CASE,
-        contactPrimary: {
-          ...MOCK_CASE.contactPrimary,
-          serviceIndicator: SERVICE_INDICATOR_TYPES.SI_PAPER,
-        },
+        petitioners: [
+          {
+            ...getContactPrimary(MOCK_CASE),
+            serviceIndicator: SERVICE_INDICATOR_TYPES.SI_PAPER,
+          },
+        ],
       },
       { applicationContext },
     );

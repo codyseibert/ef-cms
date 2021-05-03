@@ -30,12 +30,12 @@ export const docketClerkEditsDocketEntryNonstandardD = test => {
     const docketEntriesBefore =
       caseDetailFormatted.formattedDocketEntries.length;
 
-    await test.runSequence('gotoCompleteDocketEntrySequence', {
+    await test.runSequence('gotoEditPaperFilingSequence', {
       docketEntryId,
       docketNumber: test.docketNumber,
     });
 
-    expect(test.getState('currentPage')).toEqual('AddDocketEntry');
+    expect(test.getState('currentPage')).toEqual('PaperFiling');
     expect(test.getState('docketEntryId')).toEqual(docketEntryId);
 
     await test.runSequence('updateDocketEntryFormValueSequence', {
@@ -43,7 +43,7 @@ export const docketClerkEditsDocketEntryNonstandardD = test => {
       value: 'CS',
     });
 
-    await test.runSequence('fileDocketEntrySequence', {
+    await test.runSequence('submitPaperFilingSequence', {
       isSavingForLater: true,
     });
 
@@ -70,7 +70,7 @@ export const docketClerkEditsDocketEntryNonstandardD = test => {
       value: petitionDocument.docketEntryId,
     });
 
-    await test.runSequence('fileDocketEntrySequence', {
+    await test.runSequence('submitPaperFilingSequence', {
       isSavingForLater: true,
     });
 
@@ -101,7 +101,7 @@ export const docketClerkEditsDocketEntryNonstandardD = test => {
       documentTitle: 'Certificate of Service of Petition 05-05-2015',
       documentType: 'Certificate of Service',
       eventCode: 'MISCL',
-      serviceDate: '2015-05-05',
+      serviceDate: '2015-05-05T04:00:00.000Z',
     });
   });
 };

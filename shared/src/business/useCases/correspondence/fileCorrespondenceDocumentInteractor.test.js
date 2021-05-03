@@ -3,6 +3,7 @@ const {
 } = require('../../test/createTestApplicationContext');
 const {
   CASE_TYPES_MAP,
+  CONTACT_TYPES,
   COUNTRY_TYPES,
   PARTY_TYPES,
   ROLES,
@@ -21,19 +22,10 @@ describe('fileCorrespondenceDocumentInteractor', () => {
   const mockCase = {
     caseCaption: 'Caption',
     caseType: CASE_TYPES_MAP.deficiency,
-    contactPrimary: {
-      address1: '123 Main St',
-      city: 'Somewhere',
-      countryType: COUNTRY_TYPES.DOMESTIC,
-      email: 'contact@example.com',
-      name: 'Contact Primary',
-      phone: '123123134',
-      postalCode: '12345',
-      state: 'TN',
-    },
     docketEntries: [
       {
         docketEntryId: 'cf105788-5d34-4451-aa8d-dfd9a851b675',
+        docketNumber: '123-45',
         documentTitle: 'Docket Record 1',
         documentType: 'Order that case is assigned',
         eventCode: 'OAJ',
@@ -48,6 +40,19 @@ describe('fileCorrespondenceDocumentInteractor', () => {
     docketNumber: '123-45',
     filingType: 'Myself',
     partyType: PARTY_TYPES.petitioner,
+    petitioners: [
+      {
+        address1: '123 Main St',
+        city: 'Somewhere',
+        contactType: CONTACT_TYPES.primary,
+        countryType: COUNTRY_TYPES.DOMESTIC,
+        email: 'contact@example.com',
+        name: 'Contact Primary',
+        phone: '123123134',
+        postalCode: '12345',
+        state: 'TN',
+      },
+    ],
     preferredTrialCity: 'Fresno, California',
     procedureType: 'Regular',
   };
@@ -101,7 +106,7 @@ describe('fileCorrespondenceDocumentInteractor', () => {
       documentMetadata: {
         docketNumber: mockCase.docketNumber,
         documentTitle: 'A title',
-        filingDate: '2001-02-01',
+        filingDate: '2001-02-01T05:00:00.000Z',
       },
       primaryDocumentFileId: '14bb669b-0962-4781-87a0-50718f556e2b',
     });
@@ -113,7 +118,7 @@ describe('fileCorrespondenceDocumentInteractor', () => {
         correspondenceId: '14bb669b-0962-4781-87a0-50718f556e2b',
         documentTitle: 'A title',
         filedBy: mockUser.name,
-        filingDate: '2001-02-01',
+        filingDate: '2001-02-01T05:00:00.000Z',
         userId: '2474e5c0-f741-4120-befa-b77378ac8bf0',
       },
       docketNumber: mockCase.docketNumber,
@@ -131,7 +136,7 @@ describe('fileCorrespondenceDocumentInteractor', () => {
         documentMetadata: {
           docketNumber: mockCase.docketNumber,
           documentTitle: 'A title',
-          filingDate: '2001-02-01',
+          filingDate: '2001-02-01T05:00:00.000Z',
         },
         primaryDocumentFileId: '14bb669b-0962-4781-87a0-50718f556e2b',
       },
@@ -143,7 +148,7 @@ describe('fileCorrespondenceDocumentInteractor', () => {
           correspondenceId: '14bb669b-0962-4781-87a0-50718f556e2b',
           documentTitle: 'A title',
           filedBy: mockUser.name,
-          filingDate: '2001-02-01',
+          filingDate: '2001-02-01T05:00:00.000Z',
           userId: '2474e5c0-f741-4120-befa-b77378ac8bf0',
         },
       ],

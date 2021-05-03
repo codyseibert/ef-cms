@@ -2,6 +2,7 @@
 import { CerebralTest, runCompute } from 'cerebral/test';
 import { DynamoDB } from 'aws-sdk';
 import { JSDOM } from 'jsdom';
+import { SERVICE_INDICATOR_TYPES } from '../../shared/src/business/entities/EntityConstants';
 import { applicationContext } from '../src/applicationContext';
 import {
   back,
@@ -86,6 +87,16 @@ export const getFormattedCaseDetailForTest = async test => {
     state: test.getState(),
   });
 };
+
+export const contactPrimaryFromState = test =>
+  applicationContext
+    .getUtilities()
+    .getContactPrimary(test.getState('caseDetail'));
+
+export const contactSecondaryFromState = test =>
+  applicationContext
+    .getUtilities()
+    .getContactSecondary(test.getState('caseDetail'));
 
 export const getCaseMessagesForCase = async test => {
   await test.runSequence('gotoCaseDetailSequence', {
@@ -374,6 +385,7 @@ export const uploadPetition = async (
       name: 'Mona Schultz',
       phone: '+1 (884) 358-9729',
       postalCode: '77546',
+      serviceIndicator: SERVICE_INDICATOR_TYPES.SI_ELECTRONIC,
       state: 'CT',
     },
     contactSecondary: overrides.contactSecondary || {},

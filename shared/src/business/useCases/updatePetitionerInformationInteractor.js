@@ -2,23 +2,25 @@ const {
   aggregatePartiesForService,
 } = require('../utilities/aggregatePartiesForService');
 const {
+  CASE_STATUS_TYPES,
+  CONTACT_TYPES,
+  DOCUMENT_PROCESSING_STATUS_OPTIONS,
+} = require('../entities/EntityConstants');
+const {
   copyToNewPdf,
   getAddressPages,
 } = require('../useCaseHelper/service/appendPaperServiceAddressPageToPdf');
-const {
-  DOCUMENT_PROCESSING_STATUS_OPTIONS,
-} = require('../entities/EntityConstants');
 const {
   isAuthorized,
   ROLE_PERMISSIONS,
 } = require('../../authorization/authorizationClientService');
 const { addCoverToPdf } = require('./addCoversheetInteractor');
-const { Case } = require('../entities/cases/Case');
+const { Case, getPetitionerById } = require('../entities/cases/Case');
 const { defaults, pick } = require('lodash');
 const { DOCKET_SECTION } = require('../entities/EntityConstants');
 const { DocketEntry } = require('../entities/DocketEntry');
 const { getCaseCaptionMeta } = require('../utilities/getCaseCaptionMeta');
-const { UnauthorizedError } = require('../../errors/errors');
+const { NotFoundError, UnauthorizedError } = require('../../errors/errors');
 const { WorkItem } = require('../entities/WorkItem');
 
 const createDocketEntryForChange = async ({
@@ -116,7 +118,7 @@ const createWorkItemForChange = async ({
       associatedJudge: caseEntity.associatedJudge,
       caseIsInProgress: caseEntity.inProgress,
       caseStatus: caseEntity.status,
-      caseTitle: Case.getCaseTitle(Case.getCaseCaption(caseEntity)),
+      caseTitle: Case.getCaseTitle(caseEntity.caseCaption),
       docketEntry: {
         ...changeOfAddressDocketEntry.toRawObject(),
         createdAt: changeOfAddressDocketEntry.createdAt,
@@ -226,14 +228,12 @@ const createDocketEntryAndWorkItem = async ({
  * @param {object} applicationContext the application context
  * @param {object} providers the providers object
  * @param {string} providers.docketNumber the docket number of the case to update
- * @param {object} providers.contactPrimary the primary contact information to update on the case
- * @param {object} providers.contactSecondary the secondary contact information to update on the case
- * @param {object} providers.partyType the party type to update on the case
+ * @param {string} providers.updatedPetitionerData the updatedPetitionerData to update
  * @returns {object} the updated case data
  */
 exports.updatePetitionerInformationInteractor = async (
   applicationContext,
-  { contactPrimary, contactSecondary, docketNumber, partyType },
+  { docketNumber, updatedPetitionerData },
 ) => {
   const user = applicationContext.getCurrentUser();
 
@@ -241,11 +241,32 @@ exports.updatePetitionerInformationInteractor = async (
     throw new UnauthorizedError('Unauthorized for editing petition details');
   }
 
-  const primaryEditableFields = pick(
-    defaults(contactPrimary, {
+  const oldCase = await applicationContext
+    .getPersistenceGateway()
+    .getCaseByDocketNumber({ applicationContext, docketNumber });
+
+  if (oldCase.status === CASE_STATUS_TYPES.new) {
+    throw new Error(
+      `Case with docketNumber ${oldCase.docketNumber} has not been served`,
+    );
+  }
+
+  const oldCaseContact = getPetitionerById(
+    oldCase,
+    updatedPetitionerData.contactId,
+  );
+
+  if (!oldCaseContact) {
+    throw new NotFoundError(
+      `Case contact with id ${updatedPetitionerData.contactId} was not found on the case`,
+    );
+  }
+
+  const editableFields = pick(
+    defaults(updatedPetitionerData, {
+      additionalName: undefined,
       address2: undefined,
       address3: undefined,
-      secondaryName: undefined,
       title: undefined,
     }),
     [
@@ -255,119 +276,88 @@ exports.updatePetitionerInformationInteractor = async (
       'city',
       'country',
       'countryType',
-      'inCareOf',
       'name',
       'phone',
       'postalCode',
-      'secondaryName',
+      'additionalName',
       'serviceIndicator',
       'state',
-      'title',
     ],
   );
 
-  let secondaryEditableFields;
-  if (contactSecondary) {
-    secondaryEditableFields = pick(
-      defaults(contactSecondary, { address2: undefined, address3: undefined }),
-      [
-        'address1',
-        'address2',
-        'address3',
-        'city',
-        'country',
-        'countryType',
-        'inCareOf',
-        'name',
-        'phone',
-        'postalCode',
-        'serviceIndicator',
-        'state',
-      ],
-    );
-  }
-
-  const oldCase = await applicationContext
-    .getPersistenceGateway()
-    .getCaseByDocketNumber({ applicationContext, docketNumber });
-
-  const primaryChange = applicationContext
+  const petitionerInfoChange = applicationContext
     .getUtilities()
     .getDocumentTypeForAddressChange({
-      newData: primaryEditableFields,
-      oldData: oldCase.contactPrimary,
+      newData: editableFields,
+      oldData: oldCaseContact,
     });
 
-  const secondaryChange =
-    secondaryEditableFields &&
-    secondaryEditableFields.name &&
-    oldCase.contactSecondary &&
-    oldCase.contactSecondary.name
-      ? applicationContext.getUtilities().getDocumentTypeForAddressChange({
-          newData: secondaryEditableFields,
-          oldData: oldCase.contactSecondary,
-        })
-      : undefined;
-
-  let caseEntity = new Case(
+  const caseToUpdateContacts = new Case(
     {
       ...oldCase,
-      contactPrimary: {
-        ...oldCase.contactPrimary,
-        ...primaryEditableFields,
-      },
-      contactSecondary: {
-        ...oldCase.contactSecondary,
-        ...secondaryEditableFields,
-      },
-      partyType,
     },
     { applicationContext },
   );
 
+  try {
+    caseToUpdateContacts.updatePetitioner({
+      additionalName: oldCaseContact.additionalName,
+      contactId: oldCaseContact.contactId,
+      contactType: oldCaseContact.contactType,
+      email: oldCaseContact.email,
+      hasEAccess: oldCaseContact.hasEAccess,
+      isAddressSealed: oldCaseContact.isAddressSealed,
+      otherFilerType: oldCaseContact.otherFilerType,
+      sealedAndUnavailable: oldCaseContact.sealedAndUnavailable,
+      ...editableFields,
+    });
+  } catch (e) {
+    applicationContext.logger.info(
+      `Case contact with id ${updatedPetitionerData.contactId} was not found on the case`,
+    );
+    throw new NotFoundError(e.message);
+  }
+
+  //send back through the constructor so the contacts are created with the contact constructor
+  let caseEntity = new Case(
+    {
+      ...caseToUpdateContacts.toRawObject(),
+    },
+    { applicationContext },
+  ).validate();
+
   const servedParties = aggregatePartiesForService(caseEntity);
 
-  let primaryChangeDocs;
-  let secondaryChangeDocs;
+  let petitionerChangeDocs;
   let paperServicePdfUrl;
 
-  if (
-    (primaryChange && !caseEntity.contactPrimary.isAddressSealed) ||
-    (secondaryChange && !caseEntity.contactSecondary.isAddressSealed)
-  ) {
+  const updatedCaseContact = caseEntity.getPetitionerById(
+    updatedPetitionerData.contactId,
+  );
+
+  if (petitionerInfoChange && !updatedCaseContact.isAddressSealed) {
     const partyWithPaperService = caseEntity.hasPartyWithPaperService();
 
-    if (primaryChange) {
-      const privatePractitionersRepresentingContact = caseEntity.privatePractitioners.some(
-        privatePractitioner =>
-          privatePractitioner.getRepresentingPrimary(caseEntity),
-      );
+    if (petitionerInfoChange) {
+      let privatePractitionersRepresentingContact;
+      if (updatedCaseContact.contactType === CONTACT_TYPES.primary) {
+        privatePractitionersRepresentingContact = caseEntity.privatePractitioners.some(
+          privatePractitioner =>
+            privatePractitioner.getRepresentingPrimary(caseEntity),
+        );
+      } else if (updatedCaseContact.contactType === CONTACT_TYPES.secondary) {
+        privatePractitionersRepresentingContact = caseEntity.privatePractitioners.some(
+          privatePractitioner =>
+            privatePractitioner.getRepresentingSecondary(caseEntity),
+        );
+      }
 
-      primaryChangeDocs = await createDocketEntryAndWorkItem({
+      petitionerChangeDocs = await createDocketEntryAndWorkItem({
         applicationContext,
         caseEntity,
-        change: primaryChange,
-        editableFields: primaryEditableFields,
-        oldCaseContact: oldCase.contactPrimary,
-        partyWithPaperService,
-        privatePractitionersRepresentingContact,
-        servedParties,
-        user,
-      });
-    }
-
-    if (secondaryChange) {
-      const privatePractitionersRepresentingContact = caseEntity.privatePractitioners.some(
-        privatePractitioner =>
-          privatePractitioner.getRepresentingSecondary(caseEntity),
-      );
-
-      secondaryChangeDocs = await createDocketEntryAndWorkItem({
-        applicationContext,
-        caseEntity,
-        change: secondaryChange,
-        editableFields: secondaryEditableFields,
-        oldCaseContact: oldCase.contactSecondary,
+        change: petitionerInfoChange,
+        editableFields,
+        oldCaseContact,
         partyWithPaperService,
         privatePractitionersRepresentingContact,
         servedParties,
@@ -379,32 +369,31 @@ exports.updatePetitionerInformationInteractor = async (
       paperServicePdfUrl = await generatePaperServicePdf({
         applicationContext,
         caseEntity,
-        primaryChangeDocs,
-        secondaryChangeDocs,
+        primaryChangeDocs: petitionerChangeDocs,
         servedParties,
       });
     }
   }
 
   if (
-    contactPrimary.email &&
-    contactPrimary.email !== oldCase.contactPrimary.email
+    updatedPetitionerData.updatedEmail &&
+    updatedPetitionerData.updatedEmail !== oldCaseContact.email
   ) {
     const isEmailAvailable = await applicationContext
       .getPersistenceGateway()
       .isEmailAvailable({
         applicationContext,
-        email: contactPrimary.email,
+        email: updatedPetitionerData.updatedEmail,
       });
-
     if (isEmailAvailable) {
       caseEntity = await applicationContext
         .getUseCaseHelpers()
-        .createUserForContactPrimary({
+        .createUserForContact({
           applicationContext,
           caseEntity,
-          email: contactPrimary.email,
-          name: contactPrimary.name,
+          contactId: updatedPetitionerData.contactId,
+          email: updatedPetitionerData.updatedEmail,
+          name: updatedCaseContact.name,
         });
     } else {
       caseEntity = await applicationContext
@@ -412,8 +401,9 @@ exports.updatePetitionerInformationInteractor = async (
         .addExistingUserToCase({
           applicationContext,
           caseEntity,
-          email: contactPrimary.email,
-          name: contactPrimary.name,
+          contactId: updatedPetitionerData.contactId,
+          email: updatedPetitionerData.updatedEmail,
+          name: updatedCaseContact.name,
         });
     }
   }

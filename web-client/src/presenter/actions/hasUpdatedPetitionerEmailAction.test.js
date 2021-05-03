@@ -1,3 +1,4 @@
+import { CONTACT_TYPES } from '../../../../shared/src/business/entities/EntityConstants';
 import { hasUpdatedPetitionerEmailAction } from './hasUpdatedPetitionerEmailAction';
 import { presenter } from '../presenter-mock';
 import { runAction } from 'cerebral/test';
@@ -15,27 +16,33 @@ describe('hasUpdatedPetitionerEmailAction', () => {
     };
   });
 
-  it('returns the yes path when caseDetail.contactPrimary.email is different than form.contactPrimary.email', async () => {
+  it('returns the yes path when form.contact.updatedEmail is defined', async () => {
     runAction(hasUpdatedPetitionerEmailAction, {
       modules: { presenter },
       state: {
-        caseDetail: { contactPrimary: { email: INITIAL_EMAIL } },
-        form: { contactPrimary: { email: UPDATED_EMAIL } },
+        caseDetail: {
+          petitioners: [
+            { contactType: CONTACT_TYPES.primary, email: INITIAL_EMAIL },
+          ],
+        },
+        form: { contact: { updatedEmail: UPDATED_EMAIL } },
       },
     });
 
     expect(pathYesStub).toHaveBeenCalled();
   });
 
-  it('returns the no path when caseDetail.contactPrimary.email is the same as form.contactPrimary.email', async () => {
+  it('returns the no path when orm.contact.updatedEmail is not defined', async () => {
     runAction(hasUpdatedPetitionerEmailAction, {
       modules: { presenter },
       state: {
         caseDetail: {
-          contactPrimary: { email: INITIAL_EMAIL },
+          petitioners: [
+            { contactType: CONTACT_TYPES.primary, email: INITIAL_EMAIL },
+          ],
         },
         form: {
-          contactPrimary: { email: INITIAL_EMAIL },
+          contact: { updatedEmail: undefined },
         },
       },
     });
