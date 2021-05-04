@@ -38,6 +38,12 @@ describe('updateDocketEntryFormValueSequence', () => {
       documentTitle: 'Some Random Document Title',
       documentType: 'boop',
       scenario: 'bop',
+      secondaryDocument: {
+        category: 'beep',
+        documentTitle: 'Some Random Document Title',
+        documentType: 'boop',
+        scenario: 'bop',
+      },
     };
   });
 
@@ -159,7 +165,17 @@ describe('updateDocketEntryFormValueSequence', () => {
         documentTitle: 'Agreed Computation for Entry of Decision',
         documentType: 'Agreed Computation for Entry of Decision',
         eventCode: 'ACED',
+        freeText: undefined,
+        objections: undefined,
+        ordinalValue: undefined,
+        pending: undefined,
         scenario: 'Standard',
+        secondaryDocument: undefined,
+        serviceDate: undefined,
+        serviceDateDay: undefined,
+        serviceDateMonth: undefined,
+        serviceDateYear: undefined,
+        trialLocation: undefined,
       });
     });
 
@@ -178,8 +194,18 @@ describe('updateDocketEntryFormValueSequence', () => {
         documentTitle: 'Agreed Computation for Entry of Decision',
         documentType: 'Agreed Computation for Entry of Decision',
         eventCode: 'ACED',
+        freeText: undefined,
+        objections: undefined,
+        ordinalValue: undefined,
+        pending: undefined,
         previousDocument: undefined,
         scenario: 'Standard',
+        secondaryDocument: undefined,
+        serviceDate: undefined,
+        serviceDateDay: undefined,
+        serviceDateMonth: undefined,
+        serviceDateYear: undefined,
+        trialLocation: undefined,
       });
     });
 
@@ -201,8 +227,18 @@ describe('updateDocketEntryFormValueSequence', () => {
         documentType: 'Agreed Computation for Entry of Decision',
         eventCode: 'ACED',
         foo: 'bar', // from screenMetadata.primary
+        freeText: undefined,
+        objections: undefined,
+        ordinalValue: undefined,
+        pending: undefined,
         previousDocument: mockCaseDetail.docketEntries[1],
         scenario: 'Standard',
+        secondaryDocument: undefined,
+        serviceDate: undefined,
+        serviceDateDay: undefined,
+        serviceDateMonth: undefined,
+        serviceDateYear: undefined,
+        trialLocation: undefined,
       });
     });
 
@@ -223,8 +259,18 @@ describe('updateDocketEntryFormValueSequence', () => {
         documentTitle: 'Agreed Computation for Entry of Decision',
         documentType: 'Agreed Computation for Entry of Decision',
         eventCode: 'ACED',
+        freeText: undefined,
+        objections: undefined,
+        ordinalValue: undefined,
+        pending: undefined,
         previousDocument: {},
         scenario: 'Standard',
+        secondaryDocument: undefined,
+        serviceDate: undefined,
+        serviceDateDay: undefined,
+        serviceDateMonth: undefined,
+        serviceDateYear: undefined,
+        trialLocation: undefined,
       });
     });
 
@@ -245,8 +291,90 @@ describe('updateDocketEntryFormValueSequence', () => {
         documentTitle: 'Agreed Computation for Entry of Decision',
         documentType: 'Agreed Computation for Entry of Decision',
         eventCode: 'ACED',
+        freeText: undefined,
+        objections: undefined,
+        ordinalValue: undefined,
+        pending: undefined,
         previousDocument: {},
         scenario: 'Standard',
+        secondaryDocument: undefined,
+        serviceDate: undefined,
+        serviceDateDay: undefined,
+        serviceDateMonth: undefined,
+        serviceDateYear: undefined,
+        trialLocation: undefined,
+      });
+    });
+  });
+
+  describe('secondaryDocument.eventCode', () => {
+    it('overwrites form values for `category`, `documentTitle`, `documentType`, and `scenario` with those respective values from the INTERNAL_EVENT_CATEGORY entry with the given secondaryDocument.eventCode', async () => {
+      await test.runSequence('updateDocketEntryFormValueSequence', {
+        key: 'secondaryDocument.eventCode',
+        value: 'ACED',
+      });
+
+      expect(test.getState('form')).toEqual({
+        ...mockFormState,
+        secondaryDocument: {
+          category: 'Decision',
+          documentTitle: 'Agreed Computation for Entry of Decision',
+          documentType: 'Agreed Computation for Entry of Decision',
+          eventCode: 'ACED',
+          freeText: undefined,
+          ordinalValue: undefined,
+          previousDocument: undefined,
+          scenario: 'Standard',
+          serviceDate: undefined,
+          trialLocation: undefined,
+        },
+      });
+    });
+
+    it('unsets form.secondaryDocument if secondaryDocument.eventCode is falsy', async () => {
+      await test.runSequence('updateDocketEntryFormValueSequence', {
+        key: 'secondaryDocument.eventCode',
+        value: undefined,
+      });
+
+      expect(test.getState('form')).toEqual({
+        ...mockFormState,
+        secondaryDocument: undefined,
+      });
+    });
+  });
+
+  describe('previousDocument', () => {
+    it('makes no states changes when props.key is previousDocument and state.screenMetadata.supporting is falsy', async () => {
+      test.setState('screenMetadata.supporting', undefined);
+
+      await test.runSequence('updateDocketEntryFormValueSequence', {
+        key: 'previousDocument',
+        value: 'some_value',
+      });
+
+      expect(test.getState('form')).toEqual({
+        ...mockFormState,
+      });
+    });
+
+    it('unsets attachments and certificate of service date fields when props.key is previousDocument and state.screenMetadata.supporting is truthy', async () => {
+      // HERE HERE!
+      test.setState('screenMetadata.supporting', true);
+
+      await test.runSequence('updateDocketEntryFormValueSequence', {
+        key: 'previousDocument',
+        value: 'some_value',
+      });
+
+      expect(test.getState('form')).toEqual({
+        ...mockFormState,
+        attachments: undefined,
+        certificateOfService: undefined,
+        certificateOfServiceDate: undefined,
+        certificateOfServiceDay: undefined,
+        certificateOfServiceMonth: undefined,
+        certificateOfServiceYear: undefined,
       });
     });
   });
