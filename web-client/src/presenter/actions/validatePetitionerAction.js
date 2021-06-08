@@ -26,10 +26,12 @@ export const validatePetitionerAction = ({
   const caseDetail = get(state.caseDetail);
 
   let errors =
-    applicationContext.getUseCases().validatePetitionerInteractor({
-      applicationContext,
-      contactInfo: contact,
-    }) || {};
+    applicationContext
+      .getUseCases()
+      .validatePetitionerInteractor(applicationContext, {
+        contactInfo: contact,
+        existingPetitioners: caseDetail.petitioners,
+      }) || {};
 
   const caseContact = applicationContext
     .getUtilities()
@@ -47,7 +49,7 @@ export const validatePetitionerAction = ({
     };
   }
 
-  store.set(state.validationErrors.contact, errors || {});
+  store.set(state.validationErrors.contact, errors);
 
   if (isEmpty(errors)) {
     return path.success();

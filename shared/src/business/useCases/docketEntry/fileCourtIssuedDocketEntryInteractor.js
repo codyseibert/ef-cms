@@ -70,7 +70,6 @@ exports.fileCourtIssuedDocketEntryInteractor = async (
       draftOrderState: null,
       editState: JSON.stringify(documentMeta),
       eventCode: documentMeta.eventCode,
-      filedBy: undefined,
       filingDate: documentMeta.filingDate,
       freeText: documentMeta.freeText,
       isDraft: false,
@@ -144,11 +143,7 @@ exports.fileCourtIssuedDocketEntryInteractor = async (
     );
   } else {
     saveItems.push(
-      applicationContext.getPersistenceGateway().createUserInboxRecord({
-        applicationContext,
-        workItem: rawValidWorkItem,
-      }),
-      applicationContext.getPersistenceGateway().createSectionInboxRecord({
+      applicationContext.getPersistenceGateway().saveWorkItem({
         applicationContext,
         workItem: rawValidWorkItem,
       }),

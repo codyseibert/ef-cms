@@ -10,7 +10,8 @@ import { getConstants } from '../../getConstants';
 import { getJudgeForCurrentUserAction } from '../actions/getJudgeForCurrentUserAction';
 import { getJudgesCaseNoteForCaseAction } from '../actions/TrialSession/getJudgesCaseNoteForCaseAction';
 import { getMessagesForCaseAction } from '../actions/CaseDetail/getMessagesForCaseAction';
-import { getPendingEmailsForPetitionersOnCaseAction } from '../actions/getPendingEmailsForPetitionersOnCaseAction';
+import { getPendingEmailsOnCaseAction } from '../actions/getPendingEmailsOnCaseAction';
+import { getPetitionersPendingEmailStatusOnCaseAction } from '../actions/getPetitionersPendingEmailStatusOnCaseAction';
 import { getTrialSessionsAction } from '../actions/TrialSession/getTrialSessionsAction';
 import { parallel } from 'cerebral/factories';
 import { resetHeaderAccordionsSequence } from './resetHeaderAccordionsSequence';
@@ -46,7 +47,7 @@ const gotoCaseDetailInternal = [
   showModalFromQueryAction,
   getCaseDeadlinesForCaseAction,
   getMessagesForCaseAction,
-  getPendingEmailsForPetitionersOnCaseAction,
+  getPendingEmailsOnCaseAction,
   setPendingEmailsForPetitionersOnCaseAction,
   setCurrentPageAction('CaseDetailInternal'),
 ];
@@ -54,6 +55,14 @@ const gotoCaseDetailInternal = [
 const gotoCaseDetailExternal = [
   getCaseAssociationAction,
   setCaseAssociationAction,
+  setCurrentPageAction('CaseDetail'),
+];
+
+const gotoCaseDetailExternalPractitioners = [
+  getCaseAssociationAction,
+  setCaseAssociationAction,
+  getPetitionersPendingEmailStatusOnCaseAction,
+  setPendingEmailsForPetitionersOnCaseAction,
   setCurrentPageAction('CaseDetail'),
 ];
 
@@ -95,13 +104,12 @@ export const gotoCaseDetailSequence = [
       [parallel([gotoCaseDetailInternal, fetchUserNotificationsSequence])],
     ),
     ...takePathForRoles(
-      [
-        USER_ROLES.petitioner,
-        USER_ROLES.privatePractitioner,
-        USER_ROLES.irsPractitioner,
-        USER_ROLES.irsSuperuser,
-      ],
+      [USER_ROLES.petitioner, USER_ROLES.irsSuperuser],
       gotoCaseDetailExternal,
+    ),
+    ...takePathForRoles(
+      [USER_ROLES.privatePractitioner, USER_ROLES.irsPractitioner],
+      gotoCaseDetailExternalPractitioners,
     ),
     chambers: gotoCaseDetailInternalWithNotes,
     judge: gotoCaseDetailInternalWithNotes,

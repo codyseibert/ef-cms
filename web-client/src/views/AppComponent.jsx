@@ -16,6 +16,7 @@ import { CaseInventoryReportModal } from './CaseInventoryReport/CaseInventoryRep
 import { CaseSearchNoMatches } from './CaseSearchNoMatches';
 import { ChangeLoginAndServiceEmail } from './ChangeLoginAndServiceEmail';
 import { Contact } from './Contact';
+import { ContactEdit } from './ContactEdit';
 import { CourtIssuedDocketEntry } from './CourtIssuedDocketEntry/CourtIssuedDocketEntry';
 import { CreateOrder } from './CreateOrder/CreateOrder';
 import { CreatePractitionerUser } from './Practitioners/CreatePractitionerUser';
@@ -32,8 +33,10 @@ import { EditDeficiencyStatistic } from './CaseDetail/EditDeficiencyStatistic';
 import { EditDocketEntryMeta } from './EditDocketEntry/EditDocketEntryMeta';
 import { EditOtherStatistics } from './CaseDetail/EditOtherStatistics';
 import { EditPetitionDetails } from './CaseDetail/EditPetitionDetails';
+import { EditPetitionerCounsel } from './EditPetitionerCounsel';
 import { EditPetitionerInformationInternal } from './EditPetitionerInformationInternal';
 import { EditPractitionerUser } from './Practitioners/EditPractitionerUser';
+import { EditRespondentCounsel } from './EditRespondentCounsel';
 import { EditTrialSession } from './TrialSessions/EditTrialSession';
 import { EditUploadCourtIssuedDocument } from './EditUploadCourtIssuedDocument/EditUploadCourtIssuedDocument';
 import { ErrorView } from './Error';
@@ -49,12 +52,10 @@ import { LogIn } from './LogIn';
 import { MessageDetail } from './Messages/MessageDetail';
 import { Messages } from './Messages/Messages';
 import { MyAccount } from './MyAccount';
-import { OtherFilerInformation } from './CaseDetail/OtherFilerInformation';
 import { PaperFiling } from './PaperFiling/PaperFiling';
 import { PendingReport } from './PendingReport/PendingReport';
 import { PetitionQc } from './PetitionQc/PetitionQc';
 import { PractitionerDetail } from './Practitioners/PractitionerDetail';
-import { PrimaryContactEdit } from './PrimaryContactEdit';
 import { PrintPaperPetitionReceipt } from './PetitionQc/PrintPaperPetitionReceipt';
 import { PrintPaperService } from './PrintPaperService';
 import { PrintPaperTrialNotices } from './PrintPaperTrialNotices';
@@ -64,7 +65,6 @@ import { PrintableTrialCalendar } from './TrialSessionDetail/PrintableTrialCalen
 import { Privacy } from './Privacy';
 import { RequestAccessWizard } from './RequestAccess/RequestAccessWizard';
 import { ReviewSavedPetition } from './CaseDetailEdit/ReviewSavedPetition';
-import { SecondaryContactEdit } from './SecondaryContactEdit';
 import { SelectDocumentType } from './FileDocument/SelectDocumentType';
 import { SignOrder } from './SignOrder';
 import { SimplePdfPreviewPage } from './PendingReport/SimplePdfPreviewPage';
@@ -104,6 +104,7 @@ const pages = {
   CaseSearchNoMatches,
   ChangeLoginAndServiceEmail,
   Contact,
+  ContactEdit,
   CourtIssuedDocketEntry,
   CreateOrder,
   CreatePractitionerUser,
@@ -120,8 +121,10 @@ const pages = {
   EditDocketEntryMeta,
   EditOtherStatistics,
   EditPetitionDetails,
+  EditPetitionerCounsel,
   EditPetitionerInformationInternal,
   EditPractitionerUser,
+  EditRespondentCounsel,
   EditTrialSession,
   EditUploadCourtIssuedDocument,
   ErrorView,
@@ -134,12 +137,10 @@ const pages = {
   MessageDetail,
   Messages,
   MyAccount,
-  OtherFilerInformation,
   PaperFiling,
   PendingReport,
   PetitionQc,
   PractitionerDetail,
-  PrimaryContactEdit,
   PrintPaperPetitionReceipt,
   PrintPaperService,
   PrintPaperTrialNotices,
@@ -149,7 +150,6 @@ const pages = {
   Privacy,
   RequestAccessWizard,
   ReviewSavedPetition,
-  SecondaryContactEdit,
   SelectDocumentType,
   SignOrder,
   SimplePdfPreviewPage,
@@ -210,12 +210,12 @@ export const AppComponent = connect(
         <Header />
         <main id="main-content" role="main">
           <CurrentPage />
-          {zipInProgress && <BatchDownloadProgress />}
           {userContactEditInProgress && <UserContactEditProgress />}
         </main>
         <Loading />
 
         <Footer />
+        {zipInProgress && <BatchDownloadProgress />}
 
         {showModal === 'TrialSessionPlanningModal' && (
           <TrialSessionPlanningModal />

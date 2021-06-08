@@ -9,6 +9,7 @@ const {
 const { applicationContext } = require('../test/createTestApplicationContext');
 const { Case } = require('../entities/cases/Case');
 const { ContactFactory } = require('../entities/contacts/ContactFactory');
+const { Petitioner } = require('../entities/contacts/Petitioner');
 
 describe('validateAddPetitionerInteractor', () => {
   let mockContact;
@@ -31,8 +32,7 @@ describe('validateAddPetitionerInteractor', () => {
   });
 
   it('should not return validation errors when contact is valid and a case caption is present', async () => {
-    const errors = validateAddPetitionerInteractor({
-      applicationContext,
+    const errors = validateAddPetitionerInteractor(applicationContext, {
       contact: mockContact,
     });
 
@@ -46,14 +46,35 @@ describe('validateAddPetitionerInteractor', () => {
       caseCaption: undefined,
     };
 
-    const errors = validateAddPetitionerInteractor({
-      applicationContext,
+    const errors = validateAddPetitionerInteractor(applicationContext, {
       contact: mockContact,
     });
 
     expect(errors).toEqual({
       address1: ContactFactory.DOMESTIC_VALIDATION_ERROR_MESSAGES.address1,
       caseCaption: Case.VALIDATION_ERROR_MESSAGES.caseCaption,
+    });
+  });
+
+  it('should return an error when second intervenor is added', async () => {
+    mockContact = {
+      ...mockContact,
+      contactType: CONTACT_TYPES.intervenor,
+    };
+    const mockExistingPetitioners = [
+      {
+        contactType: CONTACT_TYPES.intervenor,
+      },
+    ];
+
+    const errors = validateAddPetitionerInteractor(applicationContext, {
+      contact: mockContact,
+      existingPetitioners: mockExistingPetitioners,
+    });
+
+    expect(errors).toEqual({
+      contactType:
+        Petitioner.VALIDATION_ERROR_MESSAGES.contactTypeSecondIntervenor,
     });
   });
 });

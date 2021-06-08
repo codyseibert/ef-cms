@@ -16,12 +16,13 @@ export const validateAddPetitionerAction = ({
   path,
 }) => {
   const { contact } = get(state.form);
+  const existingPetitioners = get(state.caseDetail.petitioners);
 
   const errors = applicationContext
     .getUseCases()
-    .validateAddPetitionerInteractor({
-      applicationContext,
+    .validateAddPetitionerInteractor(applicationContext, {
       contact,
+      existingPetitioners,
     });
 
   if (errors) {

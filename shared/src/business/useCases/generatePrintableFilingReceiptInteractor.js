@@ -2,18 +2,21 @@ const { Case } = require('../entities/cases/Case');
 const { DocketEntry } = require('../entities/DocketEntry');
 const { getCaseCaptionMeta } = require('../utilities/getCaseCaptionMeta');
 
-const getDocumentInfo = ({ applicationContext, documentData }) => {
+const getDocumentInfo = ({ applicationContext, documentData, petitioners }) => {
   const doc = new DocketEntry(documentData, {
     applicationContext,
+    petitioners,
   });
 
   return {
     attachments: doc.attachments,
     certificateOfService: doc.certificateOfService,
-    certificateOfServiceDate: doc.certificateOfServiceDate,
     documentTitle: doc.documentTitle,
     filedBy: doc.filedBy,
     filingDate: doc.filingDate,
+    formattedCertificateOfServiceDate: applicationContext
+      .getUtilities()
+      .formatDateString(doc.certificateOfServiceDate, 'MMDDYY'),
     objections: doc.objections,
     receivedAt: doc.receivedAt,
   };
@@ -43,6 +46,7 @@ exports.generatePrintableFilingReceiptInteractor = async (
   const primaryDocument = getDocumentInfo({
     applicationContext,
     documentData: documentsFiled,
+    petitioners: caseRecord.petitioners,
   });
 
   const primaryDocumentRecord = caseEntity.docketEntries.find(

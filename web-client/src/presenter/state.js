@@ -2,7 +2,6 @@ import { addCourtIssuedDocketEntryHelper } from './computeds/addCourtIssuedDocke
 import { addCourtIssuedDocketEntryNonstandardHelper } from './computeds/addCourtIssuedDocketEntryNonstandardHelper';
 import { addDocketEntryHelper } from './computeds/addDocketEntryHelper';
 import { addToTrialSessionModalHelper } from './computeds/addToTrialSessionModalHelper';
-import { addressDisplayHelper } from './computeds/addressDisplayHelper';
 import { advancedDocumentSearchHelper } from './computeds/AdvancedSearch/advancedDocumentSearchHelper';
 import { advancedSearchHelper } from './computeds/AdvancedSearch/advancedSearchHelper';
 import { alertHelper } from './computeds/alertHelper';
@@ -10,7 +9,6 @@ import { appInstanceManagerHelper } from './computeds/appInstanceManagerHelper';
 import { batchDownloadHelper } from './computeds/batchDownloadHelper';
 import { blockedCasesReportHelper } from './computeds/blockedCasesReportHelper';
 import { caseDeadlineReportHelper } from './computeds/caseDeadlineReportHelper';
-import { caseDetailContactHelper } from './computeds/caseDetailContactHelper';
 import { caseDetailEditContactsHelper } from './computeds/caseDetailEditContactsHelper';
 import { caseDetailEditHelper } from './computeds/caseDetailEditHelper';
 import { caseDetailHeaderHelper } from './computeds/caseDetailHeaderHelper';
@@ -41,6 +39,7 @@ import { externalUserCasesHelper } from './computeds/Dashboard/externalUserCases
 import { fileDocumentHelper } from './computeds/fileDocumentHelper';
 import { fileUploadStatusHelper } from './computeds/fileUploadStatusHelper';
 import { filingPartiesFormHelper } from './computeds/filingPartiesFormHelper';
+import { formattedCaseDeadlines } from './computeds/formattedCaseDeadlines';
 import {
   formattedCaseDetail,
   formattedClosedCases,
@@ -48,6 +47,7 @@ import {
 } from './computeds/formattedCaseDetail';
 import { formattedCaseMessages } from './computeds/formattedCaseMessages';
 import { formattedDashboardTrialSessions } from './computeds/formattedDashboardTrialSessions';
+import { formattedDocketEntries } from './computeds/formattedDocketEntries';
 import { formattedDocument } from './computeds/formattedDocument';
 import { formattedMessageDetail } from './computeds/formattedMessageDetail';
 import { formattedMessages } from './computeds/formattedMessages';
@@ -67,6 +67,7 @@ import { messagesHelper } from './computeds/messagesHelper';
 import { myAccountHelper } from './computeds/myAccountHelper';
 import { orderTypesHelper } from './computeds/orderTypesHelper';
 import { paperDocketEntryHelper } from './computeds/paperDocketEntryHelper';
+import { partiesInformationHelper } from './computeds/partiesInformationHelper';
 import { pdfPreviewModalHelper } from './computeds/PDFPreviewModal/pdfPreviewModalHelper';
 import { pdfSignerHelper } from './computeds/pdfSignerHelper';
 import { pendingReportListHelper } from './computeds/pendingReportListHelper';
@@ -98,6 +99,7 @@ import { updateCaseModalHelper } from './computeds/updateCaseModalHelper';
 import { userContactEditHelper } from './computeds/userContactEditHelper';
 import { userContactEditProgressHelper } from './computeds/userContactEditProgressHelper';
 import { viewAllDocumentsHelper } from './computeds/viewAllDocumentsHelper';
+import { viewCounselHelper } from './computeds/viewCounselHelper';
 import { workQueueHelper } from './computeds/workQueueHelper';
 import { workQueueSectionHelper } from './computeds/workQueueSectionHelper';
 
@@ -108,7 +110,6 @@ const helpers = {
   addCourtIssuedDocketEntryNonstandardHelper,
   addDocketEntryHelper,
   addToTrialSessionModalHelper,
-  addressDisplayHelper,
   advancedDocumentSearchHelper,
   advancedSearchHelper,
   alertHelper,
@@ -116,7 +117,6 @@ const helpers = {
   batchDownloadHelper,
   blockedCasesReportHelper,
   caseDeadlineReportHelper,
-  caseDetailContactHelper,
   caseDetailEditContactsHelper,
   caseDetailEditHelper,
   caseDetailHeaderHelper,
@@ -147,10 +147,12 @@ const helpers = {
   fileDocumentHelper,
   fileUploadStatusHelper,
   filingPartiesFormHelper,
+  formattedCaseDeadlines,
   formattedCaseDetail,
   formattedCaseMessages,
   formattedClosedCases,
   formattedDashboardTrialSessions,
+  formattedDocketEntries,
   formattedDocument,
   formattedMessageDetail,
   formattedMessages,
@@ -170,6 +172,7 @@ const helpers = {
   myAccountHelper,
   orderTypesHelper,
   paperDocketEntryHelper,
+  partiesInformationHelper,
   pdfPreviewModalHelper,
   pdfSignerHelper,
   pendingReportListHelper,
@@ -201,6 +204,7 @@ const helpers = {
   userContactEditHelper,
   userContactEditProgressHelper,
   viewAllDocumentsHelper,
+  viewCounselHelper,
   workQueueHelper,
   workQueueSectionHelper,
 };

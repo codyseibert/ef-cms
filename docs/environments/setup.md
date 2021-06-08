@@ -6,9 +6,6 @@ This document covers the initial setup needed to get EF-CMS continuous integrati
 
 - [Amazon Web Services](https://portal.aws.amazon.com/gp/aws/developer/registration/) — hosting.
 - [CircleCI](https://circleci.com/signup/) — test running and code deployment.
-- [SonarCloud](https://sonarcloud.io/) — static code analysis.
-  - Create a [organization](https://sonarcloud.io/create-organization). Make note of the name chosen for CircleCI configuration later.
-  - There are three sub-projects to the EF-CMS — the front-end (the UI), the back-end (the API), and shared code. Make note of each project’s key and token for CircleCI configuration later.
 
 ## 2. Configure your local developer machine.
 
@@ -76,6 +73,7 @@ A prerequisite for a successful build within CircleCI is [access to CircleCI’s
   | `DYNAMSOFT_S3_ZIP_PATH` | Dynamsoft Web TWAIN full S3 path ZIP configured above, e.g. `s3://bucketname/Dynamsoft/dynamic-web-twain-sdk-14.3.1.tar.gz` |
   | `EFCMS_DOMAIN` | Domain name chosen above |
   | `COGNITO_SUFFIX` | Suffix of your choice for the Cognito URL |
+  | `USTC_ADMIN_USER` | Username of your choice used by the Cognito admin user |
   | `USTC_ADMIN_PASS` | Password of your choice used by the Cognito admin user |
   | `EMAIL_DMARC_POLICY` | DMARC policy in the format of `v=DMARC1; p=none; rua=mailto:postmaster@example.com;` |
   | `IRS_SUPERUSER_EMAIL_STG` | Email address used to serve all new petitions to the IRS for STG |
@@ -106,8 +104,21 @@ EF-CMS currently has both the concept of a deployment at a domain as well as a n
       - e.g. `cd iam/terraform/environment-specific/main && ../bin/deploy-app.sh $ENVIRONMENT`
     - mention your `DYNAMSOFT_PRODUCT_KEYS_$ENVIRONMENT`
 8. Run the `deploy-app.sh` command that you just added to `SETUP.md`.
-10. Modify `.circleci/config.yml` to add `$ENVIRONMENT` to every step under `build-and-deploy` where you want it to be built and deployed.
-11. Update CircleCI to have all the new environment variables needed.
+9. Modify `.circleci/config.yml` to add `$ENVIRONMENT` to every step under `build-and-deploy` where you want it to be built and deployed.
+10. Update CircleCI to have all the new environment variables needed.
+11. Setting up Users
+
+    1. The new environment will require an Admin account for creating users. Run the following command to create the admin account. NOTE: this script also deactivates this user.
+
+        ```bash
+        node shared/admin-tools/user/setup-admin.js
+        ```
+
+    2. If the new environment is a test environment, we have a script to setup test users for the various roles throughout the application. It activates and then deactivates the Admin user.
+
+        ```bash
+        node shared/admin-tools/user/setup-test-users.js
+        ```
 
 Then, follow the instructions found in the [Blue-Green Migration documentation](../BLUE_GREEN_MIGRATION.md) for a first-time deployment.
 

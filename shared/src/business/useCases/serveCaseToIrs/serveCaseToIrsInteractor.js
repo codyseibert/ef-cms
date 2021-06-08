@@ -177,11 +177,6 @@ exports.serveCaseToIrsInteractor = async (
   initializeCaseWorkItem.docketNumberWithSuffix =
     caseEntity.docketNumberWithSuffix;
 
-  await applicationContext.getPersistenceGateway().deleteWorkItemFromInbox({
-    applicationContext,
-    workItem: initializeCaseWorkItem.validate().toRawObject(),
-  });
-
   initializeCaseWorkItem.setAsCompleted({
     message: 'Served to IRS',
     user,
@@ -191,12 +186,12 @@ exports.serveCaseToIrsInteractor = async (
     applicationContext,
     section: PETITIONS_SECTION,
     userId: user.userId,
-    workItem: initializeCaseWorkItem,
+    workItem: initializeCaseWorkItem.validate().toRawObject(),
   });
 
   await applicationContext.getPersistenceGateway().updateWorkItem({
     applicationContext,
-    workItemToUpdate: initializeCaseWorkItem,
+    workItemToUpdate: initializeCaseWorkItem.validate().toRawObject(),
   });
   const caseWithServedDocketEntryInformation = await applicationContext
     .getUseCaseHelpers()
@@ -238,7 +233,7 @@ exports.serveCaseToIrsInteractor = async (
     .noticeOfReceiptOfPetition({
       applicationContext,
       data: {
-        address: caseEntityToUpdate.getContactPrimary(),
+        address: caseEntityToUpdate.petitioners[0],
         caseCaptionExtension,
         caseTitle,
         docketNumberWithSuffix,
@@ -255,12 +250,12 @@ exports.serveCaseToIrsInteractor = async (
       },
     });
 
-  const contactSecondary = caseEntityToUpdate.getContactSecondary();
+  const contactSecondary = caseEntityToUpdate.petitioners[1];
   if (contactSecondary) {
     const contactInformationDiff = applicationContext
       .getUtilities()
       .getAddressPhoneDiff({
-        newData: caseEntityToUpdate.getContactPrimary(),
+        newData: caseEntityToUpdate.petitioners[0],
         oldData: contactSecondary,
       });
 

@@ -15,8 +15,8 @@ import {
   fakeData,
   getFakeFile,
 } from '../../shared/src/business/test/createTestApplicationContext';
-import { formattedCaseDetail as formattedCaseDetailComputed } from '../src/presenter/computeds/formattedCaseDetail';
 import { formattedCaseMessages as formattedCaseMessagesComputed } from '../src/presenter/computeds/formattedCaseMessages';
+import { formattedDocketEntries as formattedDocketEntriesComputed } from '../src/presenter/computeds/formattedDocketEntries';
 import { formattedWorkQueue as formattedWorkQueueComputed } from '../src/presenter/computeds/formattedWorkQueue';
 import { getScannerInterface } from '../../shared/src/persistence/dynamsoft/getScannerMockInterface';
 import {
@@ -38,8 +38,8 @@ import riotRoute from 'riot-route';
 
 const { CASE_TYPES_MAP, PARTY_TYPES } = applicationContext.getConstants();
 
-const formattedCaseDetail = withAppContextDecorator(
-  formattedCaseDetailComputed,
+const formattedDocketEntries = withAppContextDecorator(
+  formattedDocketEntriesComputed,
 );
 const formattedWorkQueue = withAppContextDecorator(formattedWorkQueueComputed);
 const formattedCaseMessages = withAppContextDecorator(
@@ -79,24 +79,22 @@ export const getFormattedDocumentQCMyInbox = async test => {
   });
 };
 
-export const getFormattedCaseDetailForTest = async test => {
+export const getFormattedDocketEntriesForTest = async test => {
   await test.runSequence('gotoCaseDetailSequence', {
     docketNumber: test.docketNumber,
   });
-  return runCompute(formattedCaseDetail, {
+  return runCompute(formattedDocketEntries, {
     state: test.getState(),
   });
 };
 
-export const contactPrimaryFromState = test =>
-  applicationContext
-    .getUtilities()
-    .getContactPrimary(test.getState('caseDetail'));
+export const contactPrimaryFromState = test => {
+  return test.getState('caseDetail.petitioners.0');
+};
 
-export const contactSecondaryFromState = test =>
-  applicationContext
-    .getUtilities()
-    .getContactSecondary(test.getState('caseDetail'));
+export const contactSecondaryFromState = test => {
+  return test.getState('caseDetail.petitioners.1');
+};
 
 export const getCaseMessagesForCase = async test => {
   await test.runSequence('gotoCaseDetailSequence', {
@@ -291,6 +289,8 @@ export const assignWorkItems = async (test, to, workItems) => {
 };
 
 export const uploadExternalDecisionDocument = async test => {
+  const contactPrimary = contactPrimaryFromState(test);
+
   test.setState('form', {
     attachments: false,
     category: 'Decision',
@@ -299,8 +299,8 @@ export const uploadExternalDecisionDocument = async test => {
     documentTitle: 'Agreed Computation for Entry of Decision',
     documentType: 'Agreed Computation for Entry of Decision',
     eventCode: 'ACED',
+    filers: [contactPrimary.contactId],
     hasSupportingDocuments: false,
-    partyPrimary: true,
     primaryDocumentFile: fakeFile,
     primaryDocumentFileSize: 115022,
     scenario: 'Standard',
@@ -314,6 +314,8 @@ export const uploadExternalDecisionDocument = async test => {
 };
 
 export const uploadExternalRatificationDocument = async test => {
+  const contactPrimary = contactPrimaryFromState(test);
+
   test.setState('form', {
     attachments: false,
     category: 'Miscellaneous',
@@ -322,9 +324,9 @@ export const uploadExternalRatificationDocument = async test => {
     documentTitle: 'Ratification of do the test',
     documentType: 'Ratification',
     eventCode: 'RATF',
+    filers: [contactPrimary.contactId],
     freeText: 'do the test',
     hasSupportingDocuments: false,
-    partyPrimary: true,
     primaryDocumentFile: fakeFile,
     primaryDocumentFileSize: 115022,
     scenario: 'Nonstandard B',

@@ -1,4 +1,5 @@
 const {
+  CONTACT_TYPES,
   COUNTRY_TYPES,
   SERVICE_INDICATOR_TYPES,
 } = require('../entities/EntityConstants');
@@ -20,6 +21,8 @@ describe('validatePetitionerInteractor', () => {
       address3: 'Apt. #104',
       city: 'Jordan',
       confirmEmail: 'night@example.com',
+      contactId: '9ec8bf37-678a-489d-be6d-13121331768b',
+      contactType: CONTACT_TYPES.primary,
       countryType: COUNTRY_TYPES.DOMESTIC,
       name: 'Wilbur Rayou',
       phone: '1111111111',
@@ -31,8 +34,7 @@ describe('validatePetitionerInteractor', () => {
   });
 
   it('runs validation on a contact with no invalid properties', async () => {
-    const errors = validatePetitionerInteractor({
-      applicationContext,
+    const errors = validatePetitionerInteractor(applicationContext, {
       contactInfo: mockContact,
     });
 
@@ -46,8 +48,7 @@ describe('validatePetitionerInteractor', () => {
       updatedEmail: undefined,
     };
 
-    const errors = validatePetitionerInteractor({
-      applicationContext,
+    const errors = validatePetitionerInteractor(applicationContext, {
       contactInfo: mockContact,
     });
 
@@ -62,8 +63,7 @@ describe('validatePetitionerInteractor', () => {
       serviceIndicator: undefined, // required
     };
 
-    const errors = validatePetitionerInteractor({
-      applicationContext,
+    const errors = validatePetitionerInteractor(applicationContext, {
       contactInfo: mockContact,
     });
 
@@ -83,8 +83,7 @@ describe('validatePetitionerInteractor', () => {
       postalCode: 'what is love',
     };
 
-    const errors = validatePetitionerInteractor({
-      applicationContext,
+    const errors = validatePetitionerInteractor(applicationContext, {
       contactInfo: contact,
     });
 
@@ -104,8 +103,7 @@ describe('validatePetitionerInteractor', () => {
       updatedEmail: undefined,
     };
 
-    const errors = validatePetitionerInteractor({
-      applicationContext,
+    const errors = validatePetitionerInteractor(applicationContext, {
       contactInfo: contact,
     });
 
@@ -116,5 +114,48 @@ describe('validatePetitionerInteractor', () => {
       postalCode:
         ContactFactory.DOMESTIC_VALIDATION_ERROR_MESSAGES.postalCode[0].message,
     });
+  });
+
+  it('should return an error when second intervenor is added', async () => {
+    mockContact = {
+      ...mockContact,
+      contactType: CONTACT_TYPES.intervenor,
+    };
+    const mockExistingPetitioners = [
+      {
+        contactId: 'bbe5de3e-81b7-4354-bd9b-270717164a5f',
+        contactType: CONTACT_TYPES.intervenor,
+      },
+    ];
+
+    const errors = validatePetitionerInteractor(applicationContext, {
+      contactInfo: mockContact,
+      existingPetitioners: mockExistingPetitioners,
+    });
+
+    expect(errors).toEqual({
+      contactType:
+        Petitioner.VALIDATION_ERROR_MESSAGES.contactTypeSecondIntervenor,
+    });
+  });
+
+  it('should not return an error when first intervenor is edited', async () => {
+    mockContact = {
+      ...mockContact,
+      contactType: CONTACT_TYPES.intervenor,
+    };
+    const mockExistingPetitioners = [
+      {
+        ...mockContact,
+        contactType: CONTACT_TYPES.intervenor,
+      },
+    ];
+
+    const errors = validatePetitionerInteractor(applicationContext, {
+      contactInfo: mockContact,
+      existingPetitioners: mockExistingPetitioners,
+    });
+
+    expect(errors).toBeFalsy();
   });
 });

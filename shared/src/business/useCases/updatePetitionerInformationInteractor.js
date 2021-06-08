@@ -2,9 +2,15 @@ const {
   aggregatePartiesForService,
 } = require('../utilities/aggregatePartiesForService');
 const {
+  Case,
+  getPetitionerById,
+  getPractitionersRepresenting,
+} = require('../entities/cases/Case');
+const {
   CASE_STATUS_TYPES,
-  CONTACT_TYPES,
   DOCUMENT_PROCESSING_STATUS_OPTIONS,
+  ROLES,
+  SERVICE_INDICATOR_TYPES,
 } = require('../entities/EntityConstants');
 const {
   copyToNewPdf,
@@ -15,7 +21,6 @@ const {
   ROLE_PERMISSIONS,
 } = require('../../authorization/authorizationClientService');
 const { addCoverToPdf } = require('./addCoversheetInteractor');
-const { Case, getPetitionerById } = require('../entities/cases/Case');
 const { defaults, pick } = require('lodash');
 const { DOCKET_SECTION } = require('../entities/EntityConstants');
 const { DocketEntry } = require('../entities/DocketEntry');
@@ -134,12 +139,10 @@ const createWorkItemForChange = async ({
 
   changeOfAddressDocketEntry.setWorkItem(workItem);
 
-  await applicationContext
-    .getPersistenceGateway()
-    .saveWorkItemAndAddToSectionInbox({
-      applicationContext,
-      workItem: workItem.validate().toRawObject(),
-    });
+  await applicationContext.getPersistenceGateway().saveWorkItem({
+    applicationContext,
+    workItem: workItem.validate().toRawObject(),
+  });
 };
 
 const generatePaperServicePdf = async ({
@@ -237,13 +240,35 @@ exports.updatePetitionerInformationInteractor = async (
 ) => {
   const user = applicationContext.getCurrentUser();
 
-  if (!isAuthorized(user, ROLE_PERMISSIONS.EDIT_PETITIONER_INFO)) {
-    throw new UnauthorizedError('Unauthorized for editing petition details');
-  }
-
   const oldCase = await applicationContext
     .getPersistenceGateway()
     .getCaseByDocketNumber({ applicationContext, docketNumber });
+
+  let isRepresentingCounsel = false;
+  if (user.role === ROLES.privatePractitioner) {
+    const practitioners = getPractitionersRepresenting(
+      oldCase,
+      updatedPetitionerData.contactId,
+    );
+
+    isRepresentingCounsel = practitioners.find(
+      practitioner => practitioner.userId === user.userId,
+    );
+  }
+
+  let isCurrentPetitioner = false;
+  if (user.role === ROLES.petitioner) {
+    isCurrentPetitioner = updatedPetitionerData?.contactId === user.userId;
+  }
+
+  const hasAuthorization =
+    isRepresentingCounsel ||
+    isCurrentPetitioner ||
+    isAuthorized(user, ROLE_PERMISSIONS.EDIT_PETITIONER_INFO);
+
+  if (!hasAuthorization) {
+    throw new UnauthorizedError('Unauthorized for editing petition details');
+  }
 
   if (oldCase.status === CASE_STATUS_TYPES.new) {
     throw new Error(
@@ -274,6 +299,7 @@ exports.updatePetitionerInformationInteractor = async (
       'address2',
       'address3',
       'city',
+      'contactType',
       'country',
       'countryType',
       'name',
@@ -307,7 +333,6 @@ exports.updatePetitionerInformationInteractor = async (
       email: oldCaseContact.email,
       hasEAccess: oldCaseContact.hasEAccess,
       isAddressSealed: oldCaseContact.isAddressSealed,
-      otherFilerType: oldCaseContact.otherFilerType,
       sealedAndUnavailable: oldCaseContact.sealedAndUnavailable,
       ...editableFields,
     });
@@ -336,34 +361,25 @@ exports.updatePetitionerInformationInteractor = async (
   );
 
   if (petitionerInfoChange && !updatedCaseContact.isAddressSealed) {
-    const partyWithPaperService = caseEntity.hasPartyWithPaperService();
+    const partyWithPaperService = caseEntity.hasPartyWithServiceType(
+      SERVICE_INDICATOR_TYPES.SI_PAPER,
+    );
 
-    if (petitionerInfoChange) {
-      let privatePractitionersRepresentingContact;
-      if (updatedCaseContact.contactType === CONTACT_TYPES.primary) {
-        privatePractitionersRepresentingContact = caseEntity.privatePractitioners.some(
-          privatePractitioner =>
-            privatePractitioner.getRepresentingPrimary(caseEntity),
-        );
-      } else if (updatedCaseContact.contactType === CONTACT_TYPES.secondary) {
-        privatePractitionersRepresentingContact = caseEntity.privatePractitioners.some(
-          privatePractitioner =>
-            privatePractitioner.getRepresentingSecondary(caseEntity),
-        );
-      }
+    const privatePractitionersRepresentingContact = caseEntity.isUserIdRepresentedByPrivatePractitioner(
+      updatedCaseContact.contactId,
+    );
 
-      petitionerChangeDocs = await createDocketEntryAndWorkItem({
-        applicationContext,
-        caseEntity,
-        change: petitionerInfoChange,
-        editableFields,
-        oldCaseContact,
-        partyWithPaperService,
-        privatePractitionersRepresentingContact,
-        servedParties,
-        user,
-      });
-    }
+    petitionerChangeDocs = await createDocketEntryAndWorkItem({
+      applicationContext,
+      caseEntity,
+      change: petitionerInfoChange,
+      editableFields,
+      oldCaseContact,
+      partyWithPaperService,
+      privatePractitionersRepresentingContact,
+      servedParties,
+      user,
+    });
 
     if (servedParties.paper.length > 0) {
       paperServicePdfUrl = await generatePaperServicePdf({

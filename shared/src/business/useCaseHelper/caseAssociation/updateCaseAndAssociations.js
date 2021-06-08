@@ -3,6 +3,7 @@ const { Case } = require('../../entities/cases/Case');
 const { Correspondence } = require('../../entities/Correspondence');
 const { DocketEntry } = require('../../entities/DocketEntry');
 const { IrsPractitioner } = require('../../entities/IrsPractitioner');
+const { pick } = require('lodash');
 const { PrivatePractitioner } = require('../../entities/PrivatePractitioner');
 
 /**
@@ -41,7 +42,7 @@ const updateCaseDocketEntries = ({
       ...addedArchivedDocketEntries,
       ...updatedArchivedDocketEntries,
     ],
-    { applicationContext },
+    { applicationContext, petitioners: caseToUpdate.petitioners },
   );
 
   return validDocketEntries.map(doc =>
@@ -231,6 +232,148 @@ const updatePrivatePractitioners = ({
 };
 
 /**
+ * Identifies work item entries which have been updated and issues persistence calls
+ *
+ * @param {object} args the arguments for updating the case
+ * @param {object} args.applicationContext the application context
+ * @param {object} args.caseToUpdate the case with its updated document data
+ * @param {object} args.oldCase the case as it is currently stored in persistence, prior to these changes
+ * @returns {Array<Promise>} the persistence request promises
+ */
+const updateCaseWorkItems = async ({
+  applicationContext,
+  caseToUpdate,
+  oldCase,
+}) => {
+  const workItemUpdates = [];
+
+  const workItemsRequireUpdate =
+    oldCase.associatedJudge !== caseToUpdate.associatedJudge ||
+    oldCase.docketNumberSuffix !== caseToUpdate.docketNumberSuffix ||
+    oldCase.caseCaption !== caseToUpdate.caseCaption ||
+    oldCase.status !== caseToUpdate.status ||
+    oldCase.trialDate !== caseToUpdate.trialDate;
+
+  if (!workItemsRequireUpdate) {
+    return workItemUpdates;
+  }
+
+  const workItemMappings = await applicationContext
+    .getPersistenceGateway()
+    .getWorkItemMappingsByDocketNumber({
+      applicationContext,
+      docketNumber: caseToUpdate.docketNumber,
+    });
+
+  const updateWorkItemRecords = (updatedCase, previousCase, workItemId) => {
+    const workItemRequests = [];
+    if (previousCase.associatedJudge !== updatedCase.associatedJudge) {
+      workItemRequests.push(
+        applicationContext
+          .getUseCaseHelpers()
+          .updateAssociatedJudgeOnWorkItems({
+            applicationContext,
+            associatedJudge: updatedCase.associatedJudge,
+            workItemId,
+          }),
+      );
+    }
+    if (previousCase.caseCaption !== updatedCase.caseCaption) {
+      workItemRequests.push(
+        applicationContext.getUseCaseHelpers().updateCaseTitleOnWorkItems({
+          applicationContext,
+          caseTitle: Case.getCaseTitle(updatedCase.caseCaption),
+          workItemId,
+        }),
+      );
+    }
+    if (previousCase.docketNumberSuffix !== updatedCase.docketNumberSuffix) {
+      workItemRequests.push(
+        applicationContext
+          .getUseCaseHelpers()
+          .updateDocketNumberSuffixOnWorkItems({
+            applicationContext,
+            docketNumberSuffix: updatedCase.docketNumberSuffix,
+            workItemId,
+          }),
+      );
+    }
+    if (previousCase.status !== updatedCase.status) {
+      workItemRequests.push(
+        applicationContext.getUseCaseHelpers().updateCaseStatusOnWorkItems({
+          applicationContext,
+          caseStatus: updatedCase.status,
+          workItemId,
+        }),
+      );
+    }
+    if (previousCase.trialDate !== updatedCase.trialDate) {
+      workItemRequests.push(
+        applicationContext.getUseCaseHelpers().updateTrialDateOnWorkItems({
+          applicationContext,
+          trialDate: updatedCase.trialDate || null,
+          workItemId,
+        }),
+      );
+    }
+
+    return workItemRequests;
+  };
+
+  for (let mapping of workItemMappings) {
+    const [, workItemId] = mapping.sk.split('|');
+    workItemUpdates.push(
+      ...updateWorkItemRecords(caseToUpdate, oldCase, workItemId),
+    );
+  }
+
+  return workItemUpdates;
+};
+
+const updateUserCaseMappings = async ({
+  applicationContext,
+  caseToUpdate,
+  oldCase,
+}) => {
+  const userCaseMappingUpdates = [];
+
+  const userCaseMappingsRequireUpdate =
+    oldCase.status !== caseToUpdate.status ||
+    oldCase.docketNumberSuffix !== caseToUpdate.docketNumberSuffix ||
+    oldCase.caseCaption !== caseToUpdate.caseCaption ||
+    oldCase.leadDocketNumber !== caseToUpdate.leadDocketNumber;
+
+  if (!userCaseMappingsRequireUpdate) {
+    return userCaseMappingUpdates;
+  }
+
+  const userCaseMappings = await applicationContext
+    .getPersistenceGateway()
+    .getUserCaseMappingsByDocketNumber({
+      applicationContext,
+      docketNumber: caseToUpdate.docketNumber,
+    });
+
+  const updatedAttributeValues = pick(caseToUpdate, [
+    'caseCaption',
+    'closedDate',
+    'docketNumberSuffix',
+    'docketNumberWithSuffix',
+    'leadDocketNumber',
+    'status',
+  ]);
+
+  const mappingUpdateRequests = userCaseMappings.map(ucItem =>
+    applicationContext.getPersistenceGateway().updateUserCaseMapping({
+      applicationContext,
+      userCaseItem: { ...ucItem, ...updatedAttributeValues },
+    }),
+  );
+
+  return mappingUpdateRequests;
+};
+
+/**
  * updateCaseAndAssociations
  *
  * @param {object} providers the providers object
@@ -261,10 +404,12 @@ exports.updateCaseAndAssociations = async ({
 
   const RELATED_CASE_OPERATIONS = [
     updateCaseDocketEntries,
+    updateCaseWorkItems,
     updateCorrespondence,
     updateHearings,
     updateIrsPractitioners,
     updatePrivatePractitioners,
+    updateUserCaseMappings,
   ];
 
   const requests = RELATED_CASE_OPERATIONS.map(fn =>

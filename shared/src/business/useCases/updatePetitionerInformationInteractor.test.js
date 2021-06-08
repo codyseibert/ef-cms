@@ -11,6 +11,7 @@ const {
 const {
   getContactPrimary,
   getContactSecondary,
+  getOtherFilers,
 } = require('../entities/cases/Case');
 const {
   MOCK_CASE,
@@ -104,6 +105,7 @@ describe('updatePetitionerInformationInteractor', () => {
     mockCase = {
       ...MOCK_CASE,
       petitioners: mockPetitioners,
+      privatePractitioners: [],
       status: CASE_STATUS_TYPES.generalDocket,
     };
 
@@ -120,6 +122,60 @@ describe('updatePetitionerInformationInteractor', () => {
         docketNumber: MOCK_CASE.docketNumber,
       }),
     ).rejects.toThrow('Unauthorized for editing petition details');
+  });
+
+  it('should throw an error when the user is a privatePractitioner not associated with the case', async () => {
+    mockUser = {
+      ...mockUser,
+      role: ROLES.privatePractitioner,
+      userId: 'a003e912-7b2f-4d2f-bf00-b99ec0d29de1',
+    };
+
+    await expect(
+      updatePetitionerInformationInteractor(applicationContext, {
+        docketNumber: MOCK_CASE.docketNumber,
+        updatedPetitionerData: {
+          contactId: SECONDARY_CONTACT_ID,
+          countryType: COUNTRY_TYPES.DOMESTIC,
+        },
+      }),
+    ).rejects.toThrow('Unauthorized for editing petition details');
+  });
+
+  it('should throw an error when the user is a petitioner attempting to modify another petitioner', async () => {
+    mockUser = {
+      ...mockUser,
+      role: ROLES.petitioner,
+      userId: 'a003e912-7b2f-4d2f-bf00-b99ec0d29de1',
+    };
+
+    await expect(
+      updatePetitionerInformationInteractor(applicationContext, {
+        docketNumber: MOCK_CASE.docketNumber,
+        updatedPetitionerData: {
+          contactId: SECONDARY_CONTACT_ID,
+          countryType: COUNTRY_TYPES.DOMESTIC,
+        },
+      }),
+    ).rejects.toThrow('Unauthorized for editing petition details');
+  });
+
+  it('should NOT throw an error when the user is a petitioner its own contact information', async () => {
+    mockUser = {
+      ...mockUser,
+      role: ROLES.petitioner,
+      userId: SECONDARY_CONTACT_ID,
+    };
+
+    await expect(
+      updatePetitionerInformationInteractor(applicationContext, {
+        docketNumber: MOCK_CASE.docketNumber,
+        updatedPetitionerData: {
+          contactId: SECONDARY_CONTACT_ID,
+          countryType: COUNTRY_TYPES.DOMESTIC,
+        },
+      }),
+    ).rejects.not.toThrow('Unauthorized for editing petition details');
   });
 
   it('should throw an error when the petitioner to update can not be found on the case', async () => {
@@ -373,6 +429,30 @@ describe('updatePetitionerInformationInteractor', () => {
     expect(updatedContactSecondary.additionalName).toBe(mockAdditionalName);
   });
 
+  it('should update contactType', async () => {
+    mockCase = {
+      ...MOCK_CASE_WITH_SECONDARY_OTHERS,
+      status: CASE_STATUS_TYPES.generalDocketReadyForTrial,
+    };
+    const otherFilerToUpdate = getOtherFilers(mockCase)[0];
+
+    await updatePetitionerInformationInteractor(applicationContext, {
+      docketNumber: MOCK_CASE_WITH_SECONDARY_OTHERS.docketNumber,
+      updatedPetitionerData: {
+        ...otherFilerToUpdate,
+        contactType: CONTACT_TYPES.otherPetitioner,
+      },
+    });
+
+    const updatedPetitioners = applicationContext.getPersistenceGateway()
+      .updateCase.mock.calls[0][0].caseToUpdate.petitioners;
+
+    const updatedOtherFiler = updatedPetitioners.find(
+      p => p.contactId === otherFilerToUpdate.contactId,
+    );
+    expect(updatedOtherFiler.contactType).toBe(CONTACT_TYPES.otherPetitioner);
+  });
+
   it('should throw an error when attempting to update contactPrimary.countryType to an invalid value', async () => {
     await expect(
       updatePetitionerInformationInteractor(applicationContext, {
@@ -473,8 +553,8 @@ describe('updatePetitionerInformationInteractor', () => {
     });
 
     expect(
-      applicationContext.getPersistenceGateway()
-        .saveWorkItemAndAddToSectionInbox.mock.calls[0][0].workItem,
+      applicationContext.getPersistenceGateway().saveWorkItem.mock.calls[0][0]
+        .workItem,
     ).toMatchObject({
       caseTitle: 'Test Petitioner',
     });
@@ -525,8 +605,7 @@ describe('updatePetitionerInformationInteractor', () => {
       );
 
       expect(
-        applicationContext.getPersistenceGateway()
-          .saveWorkItemAndAddToSectionInbox,
+        applicationContext.getPersistenceGateway().saveWorkItem,
       ).toHaveBeenCalled();
       expect(noticeOfChangeDocketEntryWithWorkItem.workItem).toBeDefined();
       expect(noticeOfChangeDocketEntryWithWorkItem.additionalInfo).toBe(
@@ -563,8 +642,7 @@ describe('updatePetitionerInformationInteractor', () => {
       );
 
       expect(
-        applicationContext.getPersistenceGateway()
-          .saveWorkItemAndAddToSectionInbox,
+        applicationContext.getPersistenceGateway().saveWorkItem,
       ).toHaveBeenCalled();
       expect(noticeOfChangeDocketEntryWithWorkItem.workItem).toBeDefined();
       expect(noticeOfChangeDocketEntryWithWorkItem.additionalInfo).toBe(
@@ -597,8 +675,7 @@ describe('updatePetitionerInformationInteractor', () => {
         d => d.eventCode === 'NCA',
       );
       expect(
-        applicationContext.getPersistenceGateway()
-          .saveWorkItemAndAddToSectionInbox,
+        applicationContext.getPersistenceGateway().saveWorkItem,
       ).not.toHaveBeenCalled();
       expect(noticeOfChangeDocketEntryWithWorkItem.workItem).toBeUndefined();
       expect(noticeOfChangeDocketEntryWithWorkItem.additionalInfo).toBe(
@@ -632,8 +709,7 @@ describe('updatePetitionerInformationInteractor', () => {
       );
 
       expect(
-        applicationContext.getPersistenceGateway()
-          .saveWorkItemAndAddToSectionInbox,
+        applicationContext.getPersistenceGateway().saveWorkItem,
       ).not.toHaveBeenCalled();
       expect(noticeOfChangeDocketEntryWithWorkItem.workItem).toBeUndefined();
       expect(noticeOfChangeDocketEntryWithWorkItem.additionalInfo).toBe(
@@ -668,8 +744,7 @@ describe('updatePetitionerInformationInteractor', () => {
       );
 
       expect(
-        applicationContext.getPersistenceGateway()
-          .saveWorkItemAndAddToSectionInbox,
+        applicationContext.getPersistenceGateway().saveWorkItem,
       ).toHaveBeenCalled();
       expect(noticeOfChangeDocketEntryWithWorkItem.workItem).toBeDefined();
       expect(noticeOfChangeDocketEntryWithWorkItem.additionalInfo).toBe(
@@ -704,8 +779,7 @@ describe('updatePetitionerInformationInteractor', () => {
       );
 
       expect(
-        applicationContext.getPersistenceGateway()
-          .saveWorkItemAndAddToSectionInbox,
+        applicationContext.getPersistenceGateway().saveWorkItem,
       ).toHaveBeenCalled();
       expect(noticeOfChangeDocketEntryWithWorkItem.workItem).toBeDefined();
       expect(noticeOfChangeDocketEntryWithWorkItem.additionalInfo).toBe(
@@ -743,8 +817,7 @@ describe('updatePetitionerInformationInteractor', () => {
       );
 
       expect(
-        applicationContext.getPersistenceGateway()
-          .saveWorkItemAndAddToSectionInbox,
+        applicationContext.getPersistenceGateway().saveWorkItem,
       ).toHaveBeenCalled();
       expect(noticeOfChangeDocketEntryWithWorkItem.workItem).toBeDefined();
       expect(noticeOfChangeDocketEntryWithWorkItem.additionalInfo).toBe(
@@ -791,8 +864,7 @@ describe('updatePetitionerInformationInteractor', () => {
       );
 
       expect(
-        applicationContext.getPersistenceGateway()
-          .saveWorkItemAndAddToSectionInbox,
+        applicationContext.getPersistenceGateway().saveWorkItem,
       ).toHaveBeenCalled();
       expect(noticeOfChangeDocketEntryWithWorkItem.workItem).toBeDefined();
       expect(noticeOfChangeDocketEntryWithWorkItem.additionalInfo).toBe(

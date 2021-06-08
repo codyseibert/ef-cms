@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 const awsServerlessExpressMiddleware = require('@vendia/serverless-express/middleware');
 const bodyParser = require('body-parser');
 const cors = require('cors');
@@ -230,6 +231,15 @@ const {
   getUserPendingEmailLambda,
 } = require('./users/getUserPendingEmailLambda');
 const {
+  getUserPendingEmailStatusLambda,
+} = require('./users/getUserPendingEmailStatusLambda');
+const {
+  getUsersPendingEmailLambda,
+} = require('./users/getUsersPendingEmailLambda');
+const {
+  getUsersPendingEmailStatusesLambda,
+} = require('./users/getUsersPendingEmailStatusesLambda');
+const {
   opinionAdvancedSearchLambda,
 } = require('./documents/opinionAdvancedSearchLambda');
 const {
@@ -254,8 +264,8 @@ const {
   removePdfFromDocketEntryLambda,
 } = require('./documents/removePdfFromDocketEntryLambda');
 const {
-  removePetitionerFromCaseLambda,
-} = require('./cases/removePetitionerFromCaseLambda');
+  removePetitionerAndUpdateCaptionLambda,
+} = require('./cases/removePetitionerAndUpdateCaptionLambda');
 const {
   removeSignatureFromDocumentLambda,
 } = require('./documents/removeSignatureFromDocumentLambda');
@@ -335,14 +345,8 @@ const {
   updatePractitionerUserLambda,
 } = require('./practitioners/updatePractitionerUserLambda');
 const {
-  updatePrimaryContactLambda,
-} = require('./cases/updatePrimaryContactLambda');
-const {
   updateQcCompleteForTrialLambda,
 } = require('./cases/updateQcCompleteForTrialLambda');
-const {
-  updateSecondaryContactLambda,
-} = require('./cases/updateSecondaryContactLambda');
 const {
   updateTrialSessionLambda,
 } = require('./trialSessions/updateTrialSessionLambda');
@@ -399,6 +403,7 @@ const { swaggerJsonLambda } = require('./swagger/swaggerJsonLambda');
 const { swaggerLambda } = require('./swagger/swaggerLambda');
 const { unprioritizeCaseLambda } = require('./cases/unprioritizeCaseLambda');
 const { updateCaseContextLambda } = require('./cases/updateCaseContextLambda');
+const { updateContactLambda } = require('./cases/updateContactLambda');
 const { validatePdfLambda } = require('./documents/validatePdfLambda');
 const { virusScanPdfLambda } = require('./documents/virusScanPdfLambda');
 
@@ -638,9 +643,9 @@ const { virusScanPdfLambda } = require('./documents/virusScanPdfLambda');
     '/case-meta/:docketNumber/add-petitioner',
     lambdaWrapper(addPetitionerToCaseLambda),
   );
-  app.delete(
+  app.put(
     '/case-meta/:docketNumber/remove-petitioner/:contactId',
-    lambdaWrapper(removePetitionerFromCaseLambda),
+    lambdaWrapper(removePetitionerAndUpdateCaptionLambda),
   );
 }
 /**
@@ -671,12 +676,8 @@ const { virusScanPdfLambda } = require('./documents/virusScanPdfLambda');
  */
 {
   app.put(
-    '/case-parties/:docketNumber/contact-primary',
-    lambdaWrapper(updatePrimaryContactLambda),
-  );
-  app.put(
-    '/case-parties/:docketNumber/contact-secondary',
-    lambdaWrapper(updateSecondaryContactLambda),
+    '/case-parties/:docketNumber/contact',
+    lambdaWrapper(updateContactLambda),
   );
   app.post(
     '/case-parties/:docketNumber/associate-private-practitioner',
@@ -955,6 +956,15 @@ app.put(
 app.get(
   '/users/:userId/pending-email',
   lambdaWrapper(getUserPendingEmailLambda),
+);
+app.get('/users/pending-email', lambdaWrapper(getUsersPendingEmailLambda));
+app.get(
+  '/users/pending-email-status',
+  lambdaWrapper(getUsersPendingEmailStatusesLambda),
+);
+app.get(
+  '/users/:userId/pending-email-status',
+  lambdaWrapper(getUserPendingEmailStatusLambda),
 );
 app.put('/users/pending-email', lambdaWrapper(updateUserPendingEmailLambda));
 app.put(

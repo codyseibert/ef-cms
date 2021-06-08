@@ -6,9 +6,11 @@ import {
   getContactPrimary,
   getContactSecondary,
   getOtherFilers,
-  getOtherPetitioners,
   getPetitionDocketEntry,
   getPetitionerById,
+  getPractitionersRepresenting,
+  hasPartyWithServiceType,
+  isUserIdRepresentedByPrivatePractitioner,
 } from '../../shared/src/business/entities/cases/Case';
 import {
   DocketEntry,
@@ -38,6 +40,7 @@ import { generatePrintablePendingReportInteractor } from '../../shared/src/proxi
 import { getCompletedMessagesForSectionInteractor } from '../../shared/src/proxies/messages/getCompletedMessagesForSectionProxy';
 import { getCompletedMessagesForUserInteractor } from '../../shared/src/proxies/messages/getCompletedMessagesForUserProxy';
 import { getDocumentTitleWithAdditionalInfo } from '../../shared/src/business/utilities/getDocumentTitleWithAdditionalInfo';
+import { getUserPendingEmailStatusInteractor } from '../../shared/src/proxies/users/getUserPendingEmailStatusProxy';
 const {
   getDocQcSectionForUser,
   getWorkQueueFilters,
@@ -81,6 +84,7 @@ import {
   isStringISOFormatted,
   isValidDateString,
   prepareDateFromString,
+  validateDateAndCreateISO,
 } from '../../shared/src/business/utilities/DateHandler';
 import { canConsolidateInteractor } from '../../shared/src/business/useCases/caseConsolidation/canConsolidateInteractor';
 import { canSetTrialSessionAsCalendaredInteractor } from '../../shared/src/business/useCases/trialSessions/canSetTrialSessionAsCalendaredInteractor';
@@ -122,7 +126,6 @@ import { filterEmptyStrings } from '../../shared/src/business/utilities/filterEm
 import { formatAttachments } from '../../shared/src/business/utilities/formatAttachments';
 import {
   formatCase,
-  formatCaseDeadlines,
   formatDocketEntry,
   getFilingsAndProceedings,
   getFormattedCaseDetail,
@@ -156,6 +159,7 @@ import { getDocumentQCInboxForUserInteractor } from '../../shared/src/proxies/wo
 import { getDocumentQCServedForSectionInteractor } from '../../shared/src/proxies/workitems/getDocumentQCServedForSectionProxy';
 import { getDocumentQCServedForUserInteractor } from '../../shared/src/proxies/workitems/getDocumentQCServedForUserProxy';
 import { getEligibleCasesForTrialSessionInteractor } from '../../shared/src/proxies/trialSessions/getEligibleCasesForTrialSessionProxy';
+import { getFormattedPartiesNameAndTitle } from '../../shared/src/business/utilities/getFormattedPartiesNameAndTitle';
 import { getInboxMessagesForSectionInteractor } from '../../shared/src/proxies/messages/getInboxMessagesForSectionProxy';
 import { getInboxMessagesForUserInteractor } from '../../shared/src/proxies/messages/getInboxMessagesForUserProxy';
 import { getInternalUsersInteractor } from '../../shared/src/proxies/users/getInternalUsersProxy';
@@ -182,6 +186,8 @@ import { getUserInteractor } from '../../shared/src/proxies/users/getUserProxy';
 import { getUserPendingEmailInteractor } from '../../shared/src/proxies/users/getUserPendingEmailProxy';
 import { getUserPermissions } from '../../shared/src/authorization/getUserPermissions';
 import { getUsersInSectionInteractor } from '../../shared/src/proxies/users/getUsersInSectionProxy';
+import { getUsersPendingEmailInteractor } from '../../shared/src/proxies/users/getUsersPendingEmailProxy';
+import { getUsersPendingEmailStatusesInteractor } from '../../shared/src/proxies/users/getUsersPendingEmailStatusesProxy';
 import { getWorkItemInteractor } from '../../shared/src/proxies/workitems/getWorkItemProxy';
 import { loadPDFForPreviewInteractor } from '../../shared/src/business/useCases/loadPDFForPreviewInteractor';
 import { loadPDFForSigningInteractor } from '../../shared/src/business/useCases/loadPDFForSigningInteractor';
@@ -195,7 +201,7 @@ import { removeConsolidatedCasesInteractor } from '../../shared/src/proxies/remo
 import { removeItem } from '../../shared/src/persistence/localStorage/removeItem';
 import { removeItemInteractor } from '../../shared/src/business/useCases/removeItemInteractor';
 import { removePdfFromDocketEntryInteractor } from '../../shared/src/proxies/documents/removePdfFromDocketEntryProxy';
-import { removePetitionerFromCaseInteractor } from '../../shared/src/proxies/removePetitionerFromCaseProxy';
+import { removePetitionerAndUpdateCaptionInteractor } from '../../shared/src/proxies/removePetitionerAndUpdateCaptionProxy';
 import { removeSignatureFromDocumentInteractor } from '../../shared/src/proxies/documents/removeSignatureFromDocumentProxy';
 import { replaceBracketed } from '../../shared/src/business/utilities/replaceBracketed';
 import { replyToMessageInteractor } from '../../shared/src/proxies/messages/replyToMessageProxy';
@@ -227,6 +233,7 @@ import { unprioritizeCaseInteractor } from '../../shared/src/proxies/unprioritiz
 import { updateCaseContextInteractor } from '../../shared/src/proxies/updateCaseContextProxy';
 import { updateCaseDeadlineInteractor } from '../../shared/src/proxies/caseDeadline/updateCaseDeadlineProxy';
 import { updateCaseTrialSortTagsInteractor } from '../../shared/src/proxies/updateCaseTrialSortTagsProxy';
+import { updateContactInteractor } from '../../shared/src/proxies/updateContactProxy';
 import { updateCorrespondenceDocumentInteractor } from '../../shared/src/proxies/correspondence/updateCorrespondenceDocumentProxy';
 import { updateCounselOnCaseInteractor } from '../../shared/src/proxies/caseAssociation/updateCounselOnCaseProxy';
 import { updateCourtIssuedDocketEntryInteractor } from '../../shared/src/proxies/documents/updateCourtIssuedDocketEntryProxy';
@@ -237,9 +244,7 @@ import { updateOtherStatisticsInteractor } from '../../shared/src/proxies/caseSt
 import { updatePetitionDetailsInteractor } from '../../shared/src/proxies/updatePetitionDetailsProxy';
 import { updatePetitionerInformationInteractor } from '../../shared/src/proxies/updatePetitionerInformationProxy';
 import { updatePractitionerUserInteractor } from '../../shared/src/proxies/practitioners/updatePractitionerUserProxy';
-import { updatePrimaryContactInteractor } from '../../shared/src/proxies/updatePrimaryContactProxy';
 import { updateQcCompleteForTrialInteractor } from '../../shared/src/proxies/updateQcCompleteForTrialProxy';
-import { updateSecondaryContactInteractor } from '../../shared/src/proxies/updateSecondaryContactProxy';
 import { updateTrialSessionInteractor } from '../../shared/src/proxies/trialSessions/updateTrialSessionProxy';
 import { updateTrialSessionWorkingCopyInteractor } from '../../shared/src/proxies/trialSessions/updateTrialSessionWorkingCopyProxy';
 import { updateUserCaseNoteInteractor } from '../../shared/src/proxies/caseNote/updateUserCaseNoteProxy';
@@ -265,7 +270,7 @@ import { validateCaseDetailInteractor } from '../../shared/src/business/useCases
 import { validateCourtIssuedDocketEntryInteractor } from '../../shared/src/business/useCases/courtIssuedDocument/validateCourtIssuedDocketEntryInteractor';
 import { validateCreateMessageInteractor } from '../../shared/src/business/useCases/messages/validateCreateMessageInteractor';
 import { validateDocketEntryInteractor } from '../../shared/src/business/useCases/docketEntry/validateDocketEntryInteractor';
-import { validateEditPrivatePractitionerInteractor } from '../../shared/src/business/useCases/caseAssociation/validateEditPrivatePractitionerInteractor';
+import { validateEditPetitionerCounselInteractor } from '../../shared/src/business/useCases/caseAssociation/validateEditPetitionerCounselInteractor';
 import { validateExternalDocumentInformationInteractor } from '../../shared/src/business/useCases/externalDocument/validateExternalDocumentInformationInteractor';
 import { validateExternalDocumentInteractor } from '../../shared/src/business/useCases/externalDocument/validateExternalDocumentInteractor';
 import { validateHearingNoteInteractor } from '../../shared/src/business/useCases/validateHearingNoteInteractor';
@@ -279,9 +284,7 @@ import { validatePetitionInteractor } from '../../shared/src/business/useCases/v
 import { validatePetitionerInformationFormInteractor } from '../../shared/src/business/useCases/validatePetitionerInformationFormInteractor';
 import { validatePetitionerInteractor } from '../../shared/src/business/useCases/validatePetitionerInteractor';
 import { validatePractitionerInteractor } from '../../shared/src/business/useCases/practitioners/validatePractitionerInteractor';
-import { validatePrimaryContactInteractor } from '../../shared/src/business/useCases/validatePrimaryContactInteractor';
 import { validateSearchDeadlinesInteractor } from '../../shared/src/business/useCases/validateSearchDeadlinesInteractor';
-import { validateSecondaryContactInteractor } from '../../shared/src/business/useCases/validateSecondaryContactInteractor';
 import { validateStartCaseWizardInteractor } from '../../shared/src/business/useCases/startCase/validateStartCaseWizardInteractor';
 import { validateTrialSessionInteractor } from '../../shared/src/business/useCases/trialSessions/validateTrialSessionInteractor';
 import { validateUpdateUserEmailInteractor } from '../../shared/src/business/useCases/validateUpdateUserEmailInteractor';
@@ -411,7 +414,10 @@ const allUseCases = {
   getUserCaseNoteInteractor,
   getUserInteractor,
   getUserPendingEmailInteractor,
+  getUserPendingEmailStatusInteractor,
   getUsersInSectionInteractor,
+  getUsersPendingEmailInteractor,
+  getUsersPendingEmailStatusesInteractor,
   getWorkItemInteractor,
   loadPDFForPreviewInteractor,
   loadPDFForSigningInteractor,
@@ -424,7 +430,7 @@ const allUseCases = {
   removeConsolidatedCasesInteractor,
   removeItemInteractor,
   removePdfFromDocketEntryInteractor,
-  removePetitionerFromCaseInteractor,
+  removePetitionerAndUpdateCaptionInteractor,
   removeSignatureFromDocumentInteractor,
   replyToMessageInteractor,
   runTrialSessionPlanningReportInteractor,
@@ -452,6 +458,7 @@ const allUseCases = {
   updateCaseContextInteractor,
   updateCaseDeadlineInteractor,
   updateCaseTrialSortTagsInteractor,
+  updateContactInteractor,
   updateCorrespondenceDocumentInteractor,
   updateCounselOnCaseInteractor,
   updateCourtIssuedDocketEntryInteractor,
@@ -462,9 +469,7 @@ const allUseCases = {
   updatePetitionDetailsInteractor,
   updatePetitionerInformationInteractor,
   updatePractitionerUserInteractor,
-  updatePrimaryContactInteractor,
   updateQcCompleteForTrialInteractor,
-  updateSecondaryContactInteractor,
   updateTrialSessionInteractor,
   updateTrialSessionWorkingCopyInteractor,
   updateUserCaseNoteInteractor,
@@ -489,7 +494,7 @@ const allUseCases = {
   validateCreateMessageInteractor,
   validateDocketEntryInteractor,
   validateDocumentInteractor,
-  validateEditPrivatePractitionerInteractor,
+  validateEditPetitionerCounselInteractor,
   validateExternalDocumentInformationInteractor,
   validateExternalDocumentInteractor,
   validateHearingNoteInteractor,
@@ -503,17 +508,17 @@ const allUseCases = {
   validatePetitionerInformationFormInteractor,
   validatePetitionerInteractor,
   validatePractitionerInteractor,
-  validatePrimaryContactInteractor,
   validateSearchDeadlinesInteractor,
-  validateSecondaryContactInteractor,
   validateStartCaseWizardInteractor,
   validateTrialSessionInteractor,
   validateUpdateUserEmailInteractor,
   validateUserContactInteractor,
   verifyPendingCaseForUserInteractor,
   verifyUserPendingEmailInteractor,
-  virusScanPdfInteractor: args =>
-    process.env.SKIP_VIRUS_SCAN ? null : virusScanPdfInteractor(args),
+  virusScanPdfInteractor: (applicationContext, args) =>
+    process.env.SKIP_VIRUS_SCAN
+      ? null
+      : virusScanPdfInteractor(applicationContext, args),
 };
 tryCatchDecorator(allUseCases);
 
@@ -648,7 +653,6 @@ const applicationContext = {
       filterEmptyStrings,
       formatAttachments,
       formatCase,
-      formatCaseDeadlines,
       formatCaseForTrialSession,
       formatDateString,
       formatDocketEntry,
@@ -664,26 +668,30 @@ const applicationContext = {
       getDocumentTitleWithAdditionalInfo,
       getFilingsAndProceedings,
       getFormattedCaseDetail,
+      getFormattedPartiesNameAndTitle,
       getJudgeLastName,
       getMonthDayYearObj,
       getOtherFilers,
-      getOtherPetitioners,
       getPetitionDocketEntry,
       getPetitionerById,
+      getPractitionersRepresenting,
       getServedPartiesCode,
       getTrialSessionStatus,
       getWorkQueueFilters,
+      hasPartyWithServiceType,
       isExternalUser: User.isExternalUser,
       isInternalUser: User.isInternalUser,
       isPending: DocketEntry.isPending,
       isPendingOnCreation: DocketEntry.isPendingOnCreation,
       isServed,
       isStringISOFormatted,
+      isUserIdRepresentedByPrivatePractitioner,
       isValidDateString,
       prepareDateFromString,
       replaceBracketed,
       setServiceIndicatorsForCase,
       sortDocketEntries,
+      validateDateAndCreateISO,
     };
   },
   setCurrentUser,

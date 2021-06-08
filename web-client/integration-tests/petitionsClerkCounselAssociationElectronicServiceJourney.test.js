@@ -14,7 +14,6 @@ const test = setupTest();
 const { COUNTRY_TYPES, PARTY_TYPES } = applicationContext.getConstants();
 
 import { formattedCaseDetail as formattedCaseDetailComputed } from '../src/presenter/computeds/formattedCaseDetail';
-import { getContactSecondary } from '../../shared/src/business/entities/cases/Case';
 import { runCompute } from 'cerebral/test';
 import { withAppContextDecorator } from '../src/withAppContext';
 
@@ -144,12 +143,14 @@ describe('Petitions Clerk Counsel Association Journey', () => {
       practitionerMatch.userId,
     );
 
+    const contactPrimary = contactPrimaryFromState(test);
+    const contactSecondary = contactSecondaryFromState(test);
     await test.runSequence('updateModalValueSequence', {
-      key: 'representingPrimary',
+      key: `representingMap.${contactPrimary.contactId}`,
       value: true,
     });
     await test.runSequence('updateModalValueSequence', {
-      key: 'representingSecondary',
+      key: `representingMap.${contactSecondary.contactId}`,
       value: true,
     });
 
@@ -160,13 +161,9 @@ describe('Petitions Clerk Counsel Association Journey', () => {
     await test.runSequence('associatePrivatePractitionerWithCaseSequence');
 
     expect(test.getState('caseDetail.privatePractitioners.length')).toEqual(1);
-    const contactPrimary = contactPrimaryFromState(test);
-    const contactSecondary = contactSecondaryFromState(test);
-
     expect(
       test.getState('caseDetail.privatePractitioners.0.representing'),
     ).toEqual([contactPrimary.contactId, contactSecondary.contactId]);
-
     expect(test.getState('caseDetail.privatePractitioners.0.name')).toEqual(
       practitionerMatch.name,
     );
@@ -186,14 +183,25 @@ describe('Petitions Clerk Counsel Association Journey', () => {
   it('Petitions clerk removes a practitioner from a case', async () => {
     expect(test.getState('caseDetail.privatePractitioners').length).toEqual(1);
 
-    await test.runSequence('openEditPrivatePractitionersModalSequence');
+    const barNumber = test.getState(
+      'caseDetail.privatePractitioners.0.barNumber',
+    );
 
-    await test.runSequence('updateModalValueSequence', {
-      key: 'privatePractitioners.0.removeFromCase',
-      value: true,
+    await test.runSequence('gotoEditPetitionerCounselSequence', {
+      barNumber,
+      docketNumber: test.docketNumber,
     });
 
-    await test.runSequence('submitEditPrivatePractitionersModalSequence');
+    expect(test.getState('validationErrors')).toEqual({});
+    expect(test.getState('currentPage')).toEqual('EditPetitionerCounsel');
+
+    await test.runSequence('openRemovePetitionerCounselModalSequence');
+
+    expect(test.getState('modal.showModal')).toEqual(
+      'RemovePetitionerCounselModal',
+    );
+
+    await test.runSequence('removePetitionerCounselFromCaseSequence');
 
     await refreshElasticsearchIndex();
 
@@ -202,12 +210,8 @@ describe('Petitions Clerk Counsel Association Journey', () => {
     expect(test.getState('caseDetail.privatePractitioners').length).toEqual(0);
   });
 
-  it('verifies the  service indicator for the second petitioner reverts to electronic', async () => {
-    const formattedCase = runCompute(formattedCaseDetail, {
-      state: test.getState(),
-    });
-
-    const contactSecondary = getContactSecondary(formattedCase);
+  it('verifies the service indicator for the second petitioner reverts to electronic', async () => {
+    const contactSecondary = contactSecondaryFromState(test);
 
     expect(contactSecondary.serviceIndicator).toEqual(
       SERVICE_INDICATOR_TYPES.SI_ELECTRONIC,

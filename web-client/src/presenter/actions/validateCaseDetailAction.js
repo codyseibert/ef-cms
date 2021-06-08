@@ -44,18 +44,18 @@ export const validateCaseDetailAction = ({
   if (formWithComputedDates.isPaper) {
     errors = applicationContext
       .getUseCases()
-      .validatePetitionFromPaperInteractor({
-        applicationContext,
+      .validatePetitionFromPaperInteractor(applicationContext, {
         petition: {
           ...formWithComputedDates,
           ...initialDocumentFormFiles,
         },
       });
   } else {
-    errors = applicationContext.getUseCases().validateCaseDetailInteractor({
-      applicationContext,
-      caseDetail: formWithComputedDates,
-    });
+    errors = applicationContext
+      .getUseCases()
+      .validateCaseDetailInteractor(applicationContext, {
+        caseDetail: formWithComputedDates,
+      });
   }
 
   errors = aggregatePetitionerErrors({ errors });
@@ -71,8 +71,11 @@ export const validateCaseDetailAction = ({
       statistics: 'Statistics',
     };
 
-    errors = aggregateStatisticsErrors({ errors, get });
+    const { errors: formattedErrors } = aggregateStatisticsErrors({
+      errors,
+      get,
+    });
 
-    return path.error({ errorDisplayMap, errors });
+    return path.error({ errorDisplayMap, errors: formattedErrors });
   }
 };

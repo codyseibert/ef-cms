@@ -4,6 +4,7 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 config.plugins.push(
   new HtmlWebpackPlugin({
     minify: false,
+    publicPath: '/',
     template: './web-client/src/index.pug',
   }),
 );
@@ -18,12 +19,15 @@ module.exports = {
     port: 1234,
   },
   entry: {
-    main: './web-client/src/index.dev.js',
+    index: './web-client/src/index.dev.js',
   },
   mode: 'development',
   output: {
     clean: true,
-    filename: `index.${Date.now()}.js`,
+    // eslint-disable-next-line @miovision/disallow-date/no-new-date
+    filename: `[name].[fullhash].${new Date()
+      .toISOString()
+      .replace(/:/g, '.')}.js`,
     path: __dirname + '/dist',
   },
 };

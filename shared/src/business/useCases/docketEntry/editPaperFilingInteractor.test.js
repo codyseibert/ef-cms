@@ -7,6 +7,7 @@ const {
   SERVICE_INDICATOR_TYPES,
 } = require('../../entities/EntityConstants');
 const { editPaperFilingInteractor } = require('./editPaperFilingInteractor');
+const { getContactPrimary } = require('../../entities/cases/Case');
 const { MOCK_CASE } = require('../../../test/mockCase');
 
 describe('editPaperFilingInteractor', () => {
@@ -14,6 +15,8 @@ describe('editPaperFilingInteractor', () => {
 
   const mockDocketEntryId = '08ecbf7e-b316-46bb-9ac6-b7474823d202';
   const mockWorkItemId = 'a956aa05-19cb-4fc3-ba10-d97c1c567c12';
+
+  const mockPrimaryId = getContactPrimary(MOCK_CASE).contactId;
 
   const workItem = {
     docketEntry: {
@@ -87,8 +90,8 @@ describe('editPaperFilingInteractor', () => {
         documentTitle: 'My Document',
         documentType: 'Memorandum in Support',
         eventCode: 'MISP',
+        filers: [mockPrimaryId],
         isFileAttached: false,
-        partyPrimary: true,
       },
       primaryDocumentFileId: mockDocketEntryId,
     });
@@ -113,8 +116,8 @@ describe('editPaperFilingInteractor', () => {
         documentTitle: 'My Document',
         documentType: 'Memorandum in Support',
         eventCode: 'MISP',
+        filers: [mockPrimaryId],
         isFileAttached: true,
-        partyPrimary: true,
       },
       primaryDocumentFileId: mockDocketEntryId,
     });
@@ -126,13 +129,6 @@ describe('editPaperFilingInteractor', () => {
       applicationContext.getPersistenceGateway()
         .saveWorkItemForDocketClerkFilingExternalDocument,
     ).toBeCalled();
-    expect(
-      applicationContext.getPersistenceGateway().deleteWorkItemFromInbox,
-    ).toBeCalled();
-    expect(
-      applicationContext.getPersistenceGateway().deleteWorkItemFromInbox.mock
-        .calls[0][0].workItem,
-    ).toMatchObject({ workItemId: mockWorkItemId });
     expect(
       applicationContext.getUseCaseHelpers().serveDocumentAndGetPaperServicePdf,
     ).toBeCalled();
@@ -156,8 +152,8 @@ describe('editPaperFilingInteractor', () => {
         documentTitle: 'My Document',
         documentType: 'Memorandum in Support',
         eventCode: 'MISP',
+        filers: [mockPrimaryId],
         isFileAttached: true,
-        partyPrimary: true,
       },
       primaryDocumentFileId: mockDocketEntryId,
     });
@@ -174,8 +170,8 @@ describe('editPaperFilingInteractor', () => {
         documentTitle: 'My Document',
         documentType: 'Memorandum in Support',
         eventCode: 'MISP',
+        filers: [mockPrimaryId],
         isFileAttached: true,
-        partyPrimary: true,
       },
       primaryDocumentFileId: mockDocketEntryId,
     });
@@ -200,11 +196,11 @@ describe('editPaperFilingInteractor', () => {
         documentTitle: 'My Edited Document',
         documentType: 'Memorandum in Support',
         eventCode: 'MISP',
+        filers: [mockPrimaryId],
         freeText: 'Some text about this document',
         hasOtherFilingParty: true,
         isPaper: true,
         otherFilingParty: 'Bert Brooks',
-        partyPrimary: true,
       },
       primaryDocumentFileId: mockDocketEntryId,
     });
@@ -230,8 +226,8 @@ describe('editPaperFilingInteractor', () => {
         documentTitle: 'My Document',
         documentType: 'Memorandum in Support',
         eventCode: 'MISP',
+        filers: [mockPrimaryId],
         isFileAttached: true,
-        partyPrimary: true,
       },
       isSavingForLater: true,
       primaryDocumentFileId: mockDocketEntryId,
@@ -241,8 +237,7 @@ describe('editPaperFilingInteractor', () => {
       applicationContext.getPersistenceGateway().getCaseByDocketNumber,
     ).toBeCalled();
     expect(
-      applicationContext.getPersistenceGateway()
-        .saveWorkItemForDocketEntryInProgress,
+      applicationContext.getPersistenceGateway().saveWorkItem,
     ).toBeCalled();
     expect(applicationContext.getPersistenceGateway().updateCase).toBeCalled();
     expect(
@@ -257,8 +252,8 @@ describe('editPaperFilingInteractor', () => {
         documentTitle: 'My Document',
         documentType: 'Memorandum in Support',
         eventCode: 'MISP',
+        filers: [mockPrimaryId],
         isFileAttached: false,
-        partyPrimary: true,
       },
       isSavingForLater: true,
       primaryDocumentFileId: mockDocketEntryId,
@@ -268,8 +263,7 @@ describe('editPaperFilingInteractor', () => {
       applicationContext.getPersistenceGateway().getCaseByDocketNumber,
     ).toBeCalled();
     expect(
-      applicationContext.getPersistenceGateway()
-        .saveWorkItemForDocketEntryInProgress,
+      applicationContext.getPersistenceGateway().saveWorkItem,
     ).toBeCalled();
     expect(applicationContext.getPersistenceGateway().updateCase).toBeCalled();
   });

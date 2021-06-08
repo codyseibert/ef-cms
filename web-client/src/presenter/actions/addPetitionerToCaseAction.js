@@ -12,23 +12,25 @@ export const addPetitionerToCaseAction = async ({
   applicationContext,
   get,
 }) => {
+  const { CONTACT_TYPE_TITLES } = applicationContext.getConstants();
   const { docketNumber } = get(state.caseDetail);
   const { contact } = get(state.form);
 
   const updatedCase = await applicationContext
     .getUseCases()
-    .addPetitionerToCaseInteractor({
-      applicationContext,
+    .addPetitionerToCaseInteractor(applicationContext, {
       caseCaption: contact.caseCaption,
       contact,
       docketNumber,
     });
+  const contactTypeDisplay = CONTACT_TYPE_TITLES[contact.contactType];
 
   return {
     alertSuccess: {
-      message: `Petitioner ${contact.name} has been added to case.`,
+      message: `${contactTypeDisplay} ${contact.name} has been added to the case.`,
     },
     caseDetail: updatedCase,
+    contactType: contact.contactType,
     docketNumber,
     tab: 'caseInfo',
   };

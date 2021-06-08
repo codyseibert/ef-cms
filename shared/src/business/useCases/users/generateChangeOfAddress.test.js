@@ -10,7 +10,6 @@ const {
 } = require('../../entities/EntityConstants');
 const { calculateISODate } = require('../../utilities/DateHandler');
 const { generateChangeOfAddress } = require('./generateChangeOfAddress');
-const { getContactPrimary } = require('../../entities/cases/Case');
 const { MOCK_CASE } = require('../../../test/mockCase');
 jest.mock('../addCoversheetInteractor', () => ({
   addCoverToPdf: jest.fn().mockReturnValue({
@@ -170,6 +169,25 @@ describe('generateChangeOfAddress', () => {
     });
   });
 
+  it('should NOT send a notification to the user if they have no associated cases', async () => {
+    applicationContext
+      .getPersistenceGateway()
+      .getCasesByUserId.mockReturnValueOnce([]);
+
+    await generateChangeOfAddress({
+      applicationContext,
+      contactInfo: {
+        ...mockIrsPractitioner.contact,
+        address1: '234 Main St',
+      },
+      user: {},
+    });
+
+    expect(
+      applicationContext.getNotificationGateway().sendNotificationToUser,
+    ).not.toHaveBeenCalled();
+  });
+
   it('should calculate the number of pages in the generated change of address pdf', async () => {
     const mockNumberOfPages = 999;
     applicationContext
@@ -264,11 +282,11 @@ describe('generateChangeOfAddress', () => {
       ...mockCaseWithPrivatePractitioner,
       petitioners: [
         {
-          ...getContactPrimary(MOCK_CASE),
+          ...MOCK_CASE.petitioners[0],
           serviceIndicator: SERVICE_INDICATOR_TYPES.SI_ELECTRONIC,
         },
         {
-          ...MOCK_CASE.contactSecondary,
+          ...MOCK_CASE.petitioners[0],
           contactType: CONTACT_TYPES.secondary,
           serviceIndicator: SERVICE_INDICATOR_TYPES.SI_ELECTRONIC,
         },
@@ -295,8 +313,7 @@ describe('generateChangeOfAddress', () => {
       applicationContext.getDocumentGenerators().changeOfAddress,
     ).toHaveBeenCalled();
     expect(
-      applicationContext.getPersistenceGateway()
-        .saveWorkItemAndAddToSectionInbox,
+      applicationContext.getPersistenceGateway().saveWorkItem,
     ).toHaveBeenCalled();
     expect(docketEntryForNoticeOfChangeOfAddress.workItem).toBeDefined();
     expect(cases).toMatchObject([
@@ -309,11 +326,11 @@ describe('generateChangeOfAddress', () => {
       ...mockCaseWithPrivatePractitioner,
       petitioners: [
         {
-          ...getContactPrimary(MOCK_CASE),
+          ...MOCK_CASE.petitioners[0],
           serviceIndicator: SERVICE_INDICATOR_TYPES.SI_PAPER,
         },
         {
-          ...getContactPrimary(MOCK_CASE),
+          ...MOCK_CASE.petitioners[0],
           contactType: CONTACT_TYPES.secondary,
           name: 'Test Secondary',
           serviceIndicator: SERVICE_INDICATOR_TYPES.SI_ELECTRONIC,
@@ -338,8 +355,7 @@ describe('generateChangeOfAddress', () => {
       applicationContext.getDocumentGenerators().changeOfAddress,
     ).toHaveBeenCalled();
     expect(
-      applicationContext.getPersistenceGateway()
-        .saveWorkItemAndAddToSectionInbox,
+      applicationContext.getPersistenceGateway().saveWorkItem,
     ).toHaveBeenCalled();
     expect(docketEntryForNoticeOfChangeOfAddress.workItem).toBeDefined();
     expect(cases).toMatchObject([
@@ -353,11 +369,11 @@ describe('generateChangeOfAddress', () => {
       partyType: PARTY_TYPES.petitionerSpouse,
       petitioners: [
         {
-          ...getContactPrimary(MOCK_CASE),
+          ...MOCK_CASE.petitioners[0],
           serviceIndicator: SERVICE_INDICATOR_TYPES.SI_ELECTRONIC,
         },
         {
-          ...getContactPrimary(MOCK_CASE),
+          ...MOCK_CASE.petitioners[0],
           contactType: CONTACT_TYPES.secondary,
           name: 'Test Secondary',
           serviceIndicator: SERVICE_INDICATOR_TYPES.SI_PAPER,
@@ -382,8 +398,7 @@ describe('generateChangeOfAddress', () => {
       applicationContext.getDocumentGenerators().changeOfAddress,
     ).toHaveBeenCalled();
     expect(
-      applicationContext.getPersistenceGateway()
-        .saveWorkItemAndAddToSectionInbox,
+      applicationContext.getPersistenceGateway().saveWorkItem,
     ).toHaveBeenCalled();
     expect(docketEntryForNoticeOfChangeOfAddress.workItem).toBeDefined();
     expect(cases).toMatchObject([
@@ -396,11 +411,11 @@ describe('generateChangeOfAddress', () => {
       ...mockCaseWithPrivatePractitioner,
       petitioners: [
         {
-          ...getContactPrimary(MOCK_CASE),
+          ...MOCK_CASE.petitioners[0],
           serviceIndicator: SERVICE_INDICATOR_TYPES.SI_ELECTRONIC,
         },
         {
-          ...MOCK_CASE.contactSecondary,
+          ...MOCK_CASE.petitioners[0],
           contactType: CONTACT_TYPES.secondary,
           serviceIndicator: SERVICE_INDICATOR_TYPES.SI_ELECTRONIC,
         },
@@ -424,8 +439,7 @@ describe('generateChangeOfAddress', () => {
       applicationContext.getDocumentGenerators().changeOfAddress,
     ).toHaveBeenCalled();
     expect(
-      applicationContext.getPersistenceGateway()
-        .saveWorkItemAndAddToSectionInbox,
+      applicationContext.getPersistenceGateway().saveWorkItem,
     ).not.toHaveBeenCalled();
     expect(docketEntryForNoticeOfChangeOfAddress.workItem).toBeUndefined();
     expect(cases).toMatchObject([
@@ -438,11 +452,11 @@ describe('generateChangeOfAddress', () => {
       ...mockCaseWithPrivatePractitioner,
       petitioners: [
         {
-          ...getContactPrimary(MOCK_CASE),
+          ...MOCK_CASE.petitioners[0],
           serviceIndicator: SERVICE_INDICATOR_TYPES.SI_ELECTRONIC,
         },
         {
-          ...MOCK_CASE.contactSecondary,
+          ...MOCK_CASE.petitioners[0],
           contactType: CONTACT_TYPES.secondary,
           serviceIndicator: SERVICE_INDICATOR_TYPES.SI_PAPER,
         },
@@ -464,8 +478,7 @@ describe('generateChangeOfAddress', () => {
       applicationContext.getDocumentGenerators().changeOfAddress,
     ).not.toHaveBeenCalled();
     expect(
-      applicationContext.getPersistenceGateway()
-        .saveWorkItemAndAddToSectionInbox,
+      applicationContext.getPersistenceGateway().saveWorkItem,
     ).not.toHaveBeenCalled();
     expect(cases).toMatchObject([
       expect.objectContaining({ docketNumber: MOCK_CASE.docketNumber }),
@@ -495,8 +508,7 @@ describe('generateChangeOfAddress', () => {
       applicationContext.getDocumentGenerators().changeOfAddress,
     ).not.toHaveBeenCalled();
     expect(
-      applicationContext.getPersistenceGateway()
-        .saveWorkItemAndAddToSectionInbox,
+      applicationContext.getPersistenceGateway().saveWorkItem,
     ).not.toHaveBeenCalled();
     expect(cases).toMatchObject([
       expect.objectContaining({ docketNumber: MOCK_CASE.docketNumber }),
@@ -516,11 +528,11 @@ describe('generateChangeOfAddress', () => {
       partyType: PARTY_TYPES.petitionerSpouse,
       petitioners: [
         {
-          ...getContactPrimary(MOCK_CASE),
+          ...MOCK_CASE.petitioners[0],
           serviceIndicator: SERVICE_INDICATOR_TYPES.SI_ELECTRONIC,
         },
         {
-          ...getContactPrimary(MOCK_CASE),
+          ...MOCK_CASE.petitioners[0],
           contactType: CONTACT_TYPES.secondary,
           name: 'Test Secondary',
           serviceIndicator: SERVICE_INDICATOR_TYPES.SI_PAPER,
@@ -548,8 +560,7 @@ describe('generateChangeOfAddress', () => {
     ).toHaveBeenCalled();
     expect(docketEntryForNoticeOfChangeOfAddress).toBeDefined();
     expect(
-      applicationContext.getPersistenceGateway()
-        .saveWorkItemAndAddToSectionInbox,
+      applicationContext.getPersistenceGateway().saveWorkItem,
     ).toHaveBeenCalled();
     expect(cases).toMatchObject([
       expect.objectContaining({ docketNumber: MOCK_CASE.docketNumber }),
@@ -603,11 +614,11 @@ describe('generateChangeOfAddress', () => {
       ...mockCaseWithPrivatePractitioner,
       petitioners: [
         {
-          ...getContactPrimary(MOCK_CASE),
+          ...MOCK_CASE.petitioners[0],
           serviceIndicator: SERVICE_INDICATOR_TYPES.SI_PAPER,
         },
         {
-          ...getContactPrimary(MOCK_CASE),
+          ...MOCK_CASE.petitioners[0],
           contactType: CONTACT_TYPES.secondary,
           name: 'Test Secondary',
           serviceIndicator: SERVICE_INDICATOR_TYPES.SI_ELECTRONIC,
@@ -626,8 +637,8 @@ describe('generateChangeOfAddress', () => {
     });
 
     expect(
-      applicationContext.getPersistenceGateway()
-        .saveWorkItemAndAddToSectionInbox.mock.calls[0][0].workItem,
+      applicationContext.getPersistenceGateway().saveWorkItem.mock.calls[0][0]
+        .workItem,
     ).toMatchObject({
       caseTitle: 'Test Petitioner',
     });

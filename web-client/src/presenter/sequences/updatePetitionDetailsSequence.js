@@ -1,4 +1,6 @@
 import { clearAlertsAction } from '../actions/clearAlertsAction';
+import { computePetitionDatesAction } from '../actions/computePetitionDatesAction';
+import { computeStatisticDatesAction } from '../actions/StartCaseInternal/computeStatisticDatesAction';
 import { navigateToCaseDetailCaseInformationActionFactory } from '../actions/navigateToCaseDetailCaseInformationActionFactory';
 import { setAlertErrorAction } from '../actions/setAlertErrorAction';
 import { setAlertSuccessAction } from '../actions/setAlertSuccessAction';
@@ -15,6 +17,8 @@ import { validatePetitionDetailsAction } from '../actions/validatePetitionDetail
 export const updatePetitionDetailsSequence = [
   clearAlertsAction,
   startShowValidationAction,
+  computeStatisticDatesAction,
+  computePetitionDatesAction,
   validatePetitionDetailsAction,
   {
     error: [setAlertErrorAction, setValidationErrorsAction],

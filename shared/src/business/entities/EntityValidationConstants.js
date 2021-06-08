@@ -114,6 +114,7 @@ const DOCKET_ENTRY_VALIDATION_RULE_KEYS = {
     .description(
       'The party who filed the document, either the petitioner or respondent on the case.',
     ),
+  filers: joi.array().items(JoiValidationConstants.UUID).optional(),
   filingDate: JoiValidationConstants.ISO_DATE.max('now')
     .required()
     .description('Date that this Document was filed.'),
@@ -137,7 +138,7 @@ const DOCKET_ENTRY_VALIDATION_RULE_KEYS = {
     ),
   isDraft: joi
     .boolean()
-    .required()
+    .optional()
     .description('Whether the document is a draft (not on the docket record).'),
   isFileAttached: joi
     .boolean()
@@ -219,14 +220,6 @@ const DOCKET_ENTRY_VALIDATION_RULE_KEYS = {
       'When someone other than the petitioner or respondent files a document, this is the name of the person who filed that document',
     ),
   partyIrsPractitioner: joi.boolean().optional(),
-  partyPrimary: joi
-    .boolean()
-    .optional()
-    .description('Use the primary contact to compose the filedBy text.'),
-  partySecondary: joi
-    .boolean()
-    .optional()
-    .description('Use the secondary contact to compose the filedBy text.'),
   pending: joi
     .boolean()
     .optional()
@@ -367,7 +360,11 @@ const DOCKET_ENTRY_VALIDATION_RULE_KEYS = {
     .description(
       'An optional trial location used when generating a fully concatenated document title.',
     ),
-  userId: JoiValidationConstants.UUID.required(),
+  userId: JoiValidationConstants.UUID.when('isDraft', {
+    is: undefined,
+    otherwise: joi.optional(),
+    then: joi.required(),
+  }),
   workItem: joi.object().optional(),
 };
 
@@ -379,7 +376,7 @@ const WORK_ITEM_VALIDATION_RULE_KEYS = {
   caseStatus: JoiValidationConstants.STRING.valid(
     ...Object.values(CASE_STATUS_TYPES),
   ).optional(),
-  caseTitle: JoiValidationConstants.STRING.max(500).optional(),
+  caseTitle: JoiValidationConstants.CASE_CAPTION.optional(),
   completedAt: JoiValidationConstants.ISO_DATE.optional(),
   completedBy: JoiValidationConstants.STRING.max(100).optional().allow(null),
   completedByUserId: JoiValidationConstants.UUID.optional().allow(null),

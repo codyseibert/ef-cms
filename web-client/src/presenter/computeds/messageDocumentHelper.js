@@ -4,7 +4,7 @@ import { state } from 'cerebral';
 
 export const messageDocumentHelper = (get, applicationContext) => {
   const viewerDocumentIdToDisplay = get(
-    state.viewerDocumentToDisplay.documentId,
+    state.messageViewerDocumentToDisplay.documentId,
   );
 
   if (!viewerDocumentIdToDisplay) {
@@ -34,7 +34,7 @@ export const messageDocumentHelper = (get, applicationContext) => {
       useArchived: true,
     }) || {};
 
-  const isCorrespondence = !caseDocument.entityName;
+  const isCorrespondence = !!caseDocument.correspondenceId;
 
   const documentRequiresSignature = EVENT_CODES_REQUIRING_SIGNATURE.includes(
     caseDocument.eventCode,
@@ -150,7 +150,6 @@ export const messageDocumentHelper = (get, applicationContext) => {
       !isNotice,
     showEditCorrespondenceButton:
       showEditButtonForRole && showEditButtonForCorrespondenceDocument,
-    showNotServed,
     showRemoveSignatureButton:
       showApplyRemoveSignatureButtonForRole &&
       showRemoveSignatureButtonForDocument,

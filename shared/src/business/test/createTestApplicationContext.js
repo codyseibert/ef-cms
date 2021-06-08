@@ -2,9 +2,6 @@ const DateHandler = require('../utilities/DateHandler');
 const path = require('path');
 const sharedAppContext = require('../../sharedAppContext');
 const {
-  addWorkItemToSectionInbox,
-} = require('../../persistence/dynamo/workitems/addWorkItemToSectionInbox');
-const {
   aggregatePartiesForService,
 } = require('../utilities/aggregatePartiesForService');
 const {
@@ -22,9 +19,10 @@ const {
   getContactPrimary,
   getContactSecondary,
   getOtherFilers,
-  getOtherPetitioners,
   getPetitionDocketEntry,
   getPetitionerById,
+  getPractitionersRepresenting,
+  isUserIdRepresentedByPrivatePractitioner,
 } = require('../entities/cases/Case');
 const {
   compareCasesByDocketNumber,
@@ -40,12 +38,6 @@ const {
   createDocketNumber,
 } = require('../../persistence/dynamo/cases/docketNumberGenerator');
 const {
-  createSectionInboxRecord,
-} = require('../../persistence/dynamo/workitems/createSectionInboxRecord');
-const {
-  createUserInboxRecord,
-} = require('../../persistence/dynamo/workitems/createUserInboxRecord');
-const {
   deleteRecord,
 } = require('../../persistence/elasticsearch/deleteRecord');
 const {
@@ -55,8 +47,8 @@ const {
   deleteUserOutboxRecord,
 } = require('../../persistence/dynamo/workitems/deleteUserOutboxRecord');
 const {
-  deleteWorkItemFromInbox,
-} = require('../../persistence/dynamo/workitems/deleteWorkItemFromInbox');
+  deleteWorkItem,
+} = require('../../persistence/dynamo/workitems/deleteWorkItem');
 const {
   documentUrlTranslator,
 } = require('../../../src/business/utilities/documentUrlTranslator');
@@ -74,7 +66,6 @@ const {
 } = require('../../../src/business/utilities/formatAttachments');
 const {
   formatCase,
-  formatCaseDeadlines,
   formatDocketEntry,
   sortDocketEntries,
 } = require('../../../src/business/utilities/getFormattedCaseDetail');
@@ -120,6 +111,9 @@ const {
   getFormattedCaseDetail,
 } = require('../utilities/getFormattedCaseDetail');
 const {
+  getFormattedPartiesNameAndTitle,
+} = require('../utilities/getFormattedPartiesNameAndTitle');
+const {
   getFullCaseByDocketNumber,
 } = require('../../persistence/dynamo/cases/getFullCaseByDocketNumber');
 const {
@@ -135,11 +129,8 @@ const {
   putWorkItemInOutbox,
 } = require('../../persistence/dynamo/workitems/putWorkItemInOutbox');
 const {
-  saveWorkItemAndAddToSectionInbox,
-} = require('../../persistence/dynamo/workitems/saveWorkItemAndAddToSectionInbox');
-const {
-  saveWorkItemAndAddToUserAndSectionInbox,
-} = require('../../persistence/dynamo/workitems/saveWorkItemAndAddToUserAndSectionInbox');
+  saveWorkItem,
+} = require('../../persistence/dynamo/workitems/saveWorkItem');
 const {
   setServiceIndicatorsForCase,
 } = require('../utilities/setServiceIndicatorsForCase');
@@ -161,9 +152,6 @@ const {
 const {
   updateWorkItem,
 } = require('../../persistence/dynamo/workitems/updateWorkItem');
-const {
-  updateWorkItemInCase,
-} = require('../../persistence/dynamo/cases/updateWorkItemInCase');
 const {
   verifyCaseForUser,
 } = require('../../persistence/dynamo/cases/verifyCaseForUser');
@@ -271,7 +259,6 @@ const createTestApplicationContext = ({ user } = {}) => {
       .mockImplementation(filterWorkItemsForUser),
     formatAttachments: jest.fn().mockImplementation(formatAttachments),
     formatCase: jest.fn().mockImplementation(formatCase),
-    formatCaseDeadlines: jest.fn().mockImplementation(formatCaseDeadlines),
     formatDateString: jest
       .fn()
       .mockImplementation(DateHandler.formatDateString),
@@ -302,16 +289,21 @@ const createTestApplicationContext = ({ user } = {}) => {
     getFormattedCaseDetail: jest
       .fn()
       .mockImplementation(getFormattedCaseDetail),
+    getFormattedPartiesNameAndTitle: jest
+      .fn()
+      .mockImplementation(getFormattedPartiesNameAndTitle),
     getJudgeLastName: jest.fn().mockImplementation(getJudgeLastName),
     getMonthDayYearObj: jest
       .fn()
       .mockImplementation(DateHandler.getMonthDayYearObj),
     getOtherFilers: jest.fn().mockImplementation(getOtherFilers),
-    getOtherPetitioners: jest.fn().mockImplementation(getOtherPetitioners),
     getPetitionDocketEntry: jest
       .fn()
       .mockImplementation(getPetitionDocketEntry),
     getPetitionerById: jest.fn().mockImplementation(getPetitionerById),
+    getPractitionersRepresenting: jest
+      .fn()
+      .mockImplementation(getPractitionersRepresenting),
     getServedPartiesCode: jest.fn().mockImplementation(getServedPartiesCode),
     getWorkQueueFilters: jest.fn().mockImplementation(getWorkQueueFilters),
     isExternalUser: User.isExternalUser,
@@ -321,6 +313,9 @@ const createTestApplicationContext = ({ user } = {}) => {
     isStringISOFormatted: jest
       .fn()
       .mockImplementation(DateHandler.isStringISOFormatted),
+    isUserIdRepresentedByPrivatePractitioner: jest
+      .fn()
+      .mockImplementation(isUserIdRepresentedByPrivatePractitioner),
     isValidDateString: jest
       .fn()
       .mockImplementation(DateHandler.isValidDateString),
@@ -332,6 +327,9 @@ const createTestApplicationContext = ({ user } = {}) => {
       .fn()
       .mockImplementation(setServiceIndicatorsForCase),
     sortDocketEntries: jest.fn().mockImplementation(sortDocketEntries),
+    validateDateAndCreateISO: jest
+      .fn()
+      .mockImplementation(DateHandler.validateDateAndCreateISO),
   });
 
   const mockGetHttpClientReturnValue = {
@@ -401,16 +399,11 @@ const createTestApplicationContext = ({ user } = {}) => {
 
   const mockGetPersistenceGateway = appContextProxy({
     addCaseToHearing: jest.fn(),
-    addWorkItemToSectionInbox,
     bulkDeleteRecords: jest.fn().mockImplementation(bulkDeleteRecords),
     bulkIndexRecords: jest.fn().mockImplementation(bulkIndexRecords),
     createCase: jest.fn().mockImplementation(createCase),
     createCaseTrialSortMappingRecords: jest.fn(),
     createElasticsearchReindexRecord: jest.fn(),
-    createSectionInboxRecord: jest
-      .fn()
-      .mockImplementation(createSectionInboxRecord),
-    createUserInboxRecord: jest.fn().mockImplementation(createUserInboxRecord),
     deleteCaseTrialSortMappingRecords: jest.fn(),
     deleteElasticsearchReindexRecord: jest.fn(),
     deleteRecord: jest.fn().mockImplementation(deleteRecord),
@@ -420,7 +413,7 @@ const createTestApplicationContext = ({ user } = {}) => {
     deleteUserOutboxRecord: jest
       .fn()
       .mockImplementation(deleteUserOutboxRecord),
-    deleteWorkItemFromInbox: jest.fn(deleteWorkItemFromInbox),
+    deleteWorkItem: jest.fn(deleteWorkItem),
     fetchPendingItems: jest.fn(),
     getCalendaredCasesForTrialSession: jest.fn(),
     getCaseByDocketNumber: jest.fn().mockImplementation(getCaseByDocketNumber),
@@ -447,7 +440,6 @@ const createTestApplicationContext = ({ user } = {}) => {
       .fn()
       .mockImplementation(getFullCaseByDocketNumber),
     getItem: jest.fn().mockImplementation(getItem),
-
     getJudgesChambers: jest.fn().mockImplementation(getJudgesChambers),
     getJudgesChambersWithLegacy: jest
       .fn()
@@ -455,7 +447,9 @@ const createTestApplicationContext = ({ user } = {}) => {
     getReconciliationReport: jest.fn(),
     getRecord: jest.fn(),
     getUserById: jest.fn().mockImplementation(getUserByIdPersistence),
+    getUserCaseMappingsByDocketNumber: jest.fn().mockReturnValue([]),
     getWorkItemById: jest.fn().mockImplementation(getWorkItemByIdPersistence),
+    getWorkItemMappingsByDocketNumber: jest.fn().mockReturnValue([]),
     incrementCounter,
     isEmailAvailable: jest.fn(),
     isFileExists: jest.fn(),
@@ -463,12 +457,7 @@ const createTestApplicationContext = ({ user } = {}) => {
     putWorkItemInOutbox: jest.fn().mockImplementation(putWorkItemInOutbox),
     removeItem: jest.fn().mockImplementation(removeItem),
     saveDocumentFromLambda: jest.fn(),
-    saveWorkItemAndAddToSectionInbox: jest
-      .fn()
-      .mockImplementation(saveWorkItemAndAddToSectionInbox),
-    saveWorkItemAndAddToUserAndSectionInbox: jest
-      .fn()
-      .mockImplementation(saveWorkItemAndAddToUserAndSectionInbox),
+    saveWorkItem: jest.fn().mockImplementation(saveWorkItem),
     setItem: jest.fn().mockImplementation(setItem),
     setPriorityOnAllWorkItems: jest.fn(),
     setWorkItemAsRead: jest.fn().mockImplementation(setWorkItemAsRead),
@@ -477,10 +466,9 @@ const createTestApplicationContext = ({ user } = {}) => {
       .fn()
       .mockImplementation(updateCaseCorrespondence),
     updateCaseHearing: jest.fn(),
-    updateCaseTrialSortMappingRecords: jest.fn(),
     updateDocketEntry: jest.fn().mockImplementation(updateDocketEntry),
-    updateWorkItem,
-    updateWorkItemInCase,
+    updateWorkItem: jest.fn().mockImplementation(updateWorkItem),
+    updateWorkItemInCase: jest.fn(),
     uploadPdfFromClient: jest.fn().mockImplementation(() => ''),
     verifyCaseForUser: jest.fn().mockImplementation(verifyCaseForUser),
   });

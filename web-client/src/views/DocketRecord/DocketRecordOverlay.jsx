@@ -13,7 +13,7 @@ export const DocketRecordOverlay = connect(
     caseDetail: state.caseDetail,
     dismissModalSequence: sequences.dismissModalSequence,
     docketRecordIndex: state.docketRecordIndex,
-    formattedCaseDetail: state.formattedCaseDetail,
+    formattedDocketEntries: state.formattedDocketEntries,
     openCaseDocumentDownloadUrlSequence:
       sequences.openCaseDocumentDownloadUrlSequence,
   },
@@ -21,7 +21,7 @@ export const DocketRecordOverlay = connect(
     caseDetail,
     dismissModalSequence,
     docketRecordIndex,
-    formattedCaseDetail,
+    formattedDocketEntries,
     openCaseDocumentDownloadUrlSequence,
     runCancelSequence,
   }) {
@@ -77,7 +77,7 @@ export const DocketRecordOverlay = connect(
     const renderModalContent = () => {
       const closeFunc = dismissModalSequence;
       const entry =
-        formattedCaseDetail.formattedDocketEntriesOnDocketRecord[
+        formattedDocketEntries.formattedDocketEntriesOnDocketRecord[
           docketRecordIndex
         ];
       return (
@@ -87,7 +87,7 @@ export const DocketRecordOverlay = connect(
             className="modal-screen overlay mobile-document-details-overlay"
           >
             <div
-              aria-live="assertive"
+              aria-live="polite"
               aria-modal="true"
               className={'modal-overlay'}
               role="dialog"
@@ -137,7 +137,10 @@ export const DocketRecordOverlay = connect(
               <p className="margin-top-0">{entry.action}</p>
               <p className="semi-bold label margin-top-3">Served</p>
               <p className="margin-top-0">
-                {entry.isStatusServed && <span>{entry.servedAtFormatted}</span>}
+                {entry.showNotServed && (
+                  <span className="text-semibold not-served">Not served</span>
+                )}
+                {entry.showServed && <span>{entry.servedAtFormatted}</span>}
               </p>
               <p className="semi-bold label margin-top-3">Parties</p>
               <p className="margin-top-0">{entry.servedPartiesCode}</p>

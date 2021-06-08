@@ -13,27 +13,6 @@ module.exports = [
   'http://localhost:1234/mock-login?token=docketclerk&path=/case-detail/101-19',
   {
     actions: [
-      'wait for element #tab-petitioner to be visible',
-      'click element #tab-petitioner',
-      'wait for element .sealed-address to be visible',
-    ],
-    notes: 'checks a11y of seal address button',
-    url:
-      'http://localhost:1234/mock-login?token=docketclerk&path=/case-detail/101-19/case-information&info=sealed-address-button',
-  },
-  {
-    actions: [
-      'wait for element #tab-petitioner to be visible',
-      'click element #tab-petitioner',
-      'wait for element .sealed-address to be visible',
-    ],
-    notes:
-      'checks a11y of sealed address display for primary and secondary contact',
-    url:
-      'http://localhost:1234/mock-login?token=docketclerk&path=/case-detail/102-19/case-information&info=sealed-address-display',
-  },
-  {
-    actions: [
       'wait for element .usa-radio__label[for=payment-status-paid] to be visible',
       'click element .usa-radio__label[for=payment-status-paid]',
       'wait for element #petition-payment-method to be visible',
@@ -116,6 +95,38 @@ module.exports = [
     notes: 'checks a11y of case context edit dialog',
     url:
       'http://localhost:1234/mock-login?token=docketclerk&path=/case-detail/102-19&info=case-context-edit',
+  },
+  {
+    actions: [
+      'wait for #tab-case-information to be visible',
+      'click element #tab-case-information',
+      'wait for #tab-parties to be visible',
+      'click element #tab-parties',
+      'wait for #participants-and-counsel to be visible',
+      'click element #participants-and-counsel',
+      'wait for .edit-participant to be visible',
+      'click element .edit-participant',
+    ],
+    notes:
+      'checks a11y of case information tab, parties secondary tab, participants and counsel tertiary tab',
+    url:
+      'http://localhost:1234/mock-login?token=docketclerk&path=/case-detail/999-15&info=case-information-tab-parties-participants-and-counsel',
+  },
+  {
+    actions: [
+      'wait for #tab-case-information to be visible',
+      'click element #tab-case-information',
+      'wait for #tab-parties to be visible',
+      'click element #tab-parties',
+      'wait for #petitioners-and-counsel to be visible',
+      'click element #petitioners-and-counsel',
+      'wait for .edit-petitioner-button to be visible',
+      'click element .edit-petitioner-button',
+    ],
+    notes:
+      'checks a11y of case information tab, parties secondary tab, parties and counsel tertiary tab',
+    url:
+      'http://localhost:1234/mock-login?token=docketclerk&path=/case-detail/999-15&info=case-information-tab-parties-petitioner-and-counsel',
   },
   'http://localhost:1234/mock-login?token=docketclerk&path=/case-detail/110-19/documents/25100ec6-eeeb-4e88-872f-c99fad1fe6c7/add-court-issued-docket-entry',
   {

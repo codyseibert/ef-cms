@@ -60,6 +60,7 @@ exports.editPaperFilingInteractor = async (
     documentTitle: documentMetadata.documentTitle,
     documentType: documentMetadata.documentType,
     eventCode: documentMetadata.eventCode,
+    filers: documentMetadata.filers,
     freeText: documentMetadata.freeText,
     freeText2: documentMetadata.freeText2,
     hasOtherFilingParty: documentMetadata.hasOtherFilingParty,
@@ -70,8 +71,6 @@ exports.editPaperFilingInteractor = async (
     ordinalValue: documentMetadata.ordinalValue,
     otherFilingParty: documentMetadata.otherFilingParty,
     partyIrsPractitioner: documentMetadata.partyIrsPractitioner,
-    partyPrimary: documentMetadata.partyPrimary,
-    partySecondary: documentMetadata.partySecondary,
     pending: documentMetadata.pending,
     receivedAt: documentMetadata.receivedAt,
     scenario: documentMetadata.scenario,
@@ -81,10 +80,7 @@ exports.editPaperFilingInteractor = async (
   const docketEntryEntity = new DocketEntry(
     {
       ...currentDocketEntry,
-      filedBy: undefined, // allow constructor to re-generate
       ...editableFields,
-      contactPrimary: caseEntity.getContactPrimary(),
-      contactSecondary: caseEntity.getContactSecondary(),
       docketEntryId: primaryDocumentFileId,
       documentTitle: editableFields.documentTitle,
       editState: JSON.stringify(editableFields),
@@ -92,7 +88,7 @@ exports.editPaperFilingInteractor = async (
       relationship: DOCUMENT_RELATIONSHIPS.PRIMARY,
       userId: user.userId,
     },
-    { applicationContext },
+    { applicationContext, petitioners: caseEntity.petitioners },
   );
 
   let paperServicePdfUrl;
@@ -101,19 +97,6 @@ exports.editPaperFilingInteractor = async (
     const { workItem } = docketEntryEntity;
 
     if (!isSavingForLater) {
-      const workItemToDelete =
-        currentDocketEntry.workItem &&
-        !currentDocketEntry.workItem.docketEntry.isFileAttached;
-
-      if (workItemToDelete) {
-        await applicationContext
-          .getPersistenceGateway()
-          .deleteWorkItemFromInbox({
-            applicationContext,
-            workItem: currentDocketEntry.workItem,
-          });
-      }
-
       Object.assign(workItem, {
         assigneeId: null,
         assigneeName: null,
@@ -196,12 +179,10 @@ exports.editPaperFilingInteractor = async (
         sentByUserId: user.userId,
       });
 
-      await applicationContext
-        .getPersistenceGateway()
-        .saveWorkItemForDocketEntryInProgress({
-          applicationContext,
-          workItem: workItem.validate().toRawObject(),
-        });
+      await applicationContext.getPersistenceGateway().saveWorkItem({
+        applicationContext,
+        workItem: workItem.validate().toRawObject(),
+      });
     }
     caseEntity.updateDocketEntry(docketEntryEntity);
 
@@ -239,12 +220,10 @@ exports.editPaperFilingInteractor = async (
       sentByUserId: user.userId,
     });
 
-    await applicationContext
-      .getPersistenceGateway()
-      .saveWorkItemForDocketEntryInProgress({
-        applicationContext,
-        workItem: workItem.validate().toRawObject(),
-      });
+    await applicationContext.getPersistenceGateway().saveWorkItem({
+      applicationContext,
+      workItem: workItem.validate().toRawObject(),
+    });
   }
 
   caseEntity.updateDocketEntry(docketEntryEntity);

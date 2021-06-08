@@ -1,7 +1,10 @@
-import { SERVICE_INDICATOR_TYPES } from '../../../shared/src/business/entities/EntityConstants';
+import {
+  CONTACT_TYPES,
+  SERVICE_INDICATOR_TYPES,
+} from '../../../shared/src/business/entities/EntityConstants';
 import { contactPrimaryFromState } from '../helpers';
 
-export const docketClerkAddsPetitionerToCase = test => {
+export const docketClerkAddsPetitionerToCase = (test, overrides = {}) => {
   return it('docket clerk adds new petitioner to case', async () => {
     const petitionersBeforeAdding = test.getState('caseDetail.petitioners')
       .length;
@@ -11,8 +14,13 @@ export const docketClerkAddsPetitionerToCase = test => {
     });
 
     await test.runSequence('updateFormValueSequence', {
+      key: 'contact.contactType',
+      value: overrides.contactType || CONTACT_TYPES.otherPetitioner,
+    });
+
+    await test.runSequence('updateFormValueSequence', {
       key: 'contact.name',
-      value: 'A New Petitioner',
+      value: overrides.name || 'A New Petitioner',
     });
 
     await test.runSequence('updateFormValueSequence', {
@@ -52,5 +60,11 @@ export const docketClerkAddsPetitionerToCase = test => {
     );
 
     expect(test.getState('caseDetail.caseCaption')).toEqual(mockUpdatedCaption);
+
+    if (overrides.contactType === 'intervenor') {
+      test.intervenorContactId = test
+        .getState('caseDetail.petitioners')
+        .find(p => p.contactType === CONTACT_TYPES.intervenor).contactId;
+    }
   });
 };

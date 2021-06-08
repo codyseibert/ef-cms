@@ -107,6 +107,7 @@ exports.computeCoordinates = computeCoordinates;
 /**
  * generateSignedDocumentInteractor
  *
+ * @param {object} applicationContext the application context
  * @param {object} providers the providers object
  * @param {number} providers.pageIndex // Zero based index of the page to get the signature
  * @param {Uint8Array} providers.pdfData // Uint8Array containing the pdf data to modify
@@ -116,15 +117,10 @@ exports.computeCoordinates = computeCoordinates;
  * @param {object} providers.sigTextData // Signature text data including the name and title
  * @returns {ByteArray} PDF data after signature is added
  */
-exports.generateSignedDocumentInteractor = async ({
+exports.generateSignedDocumentInteractor = async (
   applicationContext,
-  pageIndex,
-  pdfData,
-  posX,
-  posY,
-  scale = 1,
-  sigTextData,
-}) => {
+  { pageIndex, pdfData, posX, posY, scale = 1, sigTextData },
+) => {
   const {
     degrees,
     PDFDocument,
@@ -140,21 +136,21 @@ exports.generateSignedDocumentInteractor = async ({
 
   const { signatureName, signatureTitle } = sigTextData;
 
-  const helveticaBoldFont = pdfDoc.embedStandardFont(
-    StandardFonts.HelveticaBold,
+  const timesRomanBoldFont = pdfDoc.embedStandardFont(
+    StandardFonts.TimesRomanBold,
   );
 
-  const textSize = 16 * scale;
-  const padding = 20 * scale;
-  const nameTextWidth = helveticaBoldFont.widthOfTextAtSize(
+  const textSize = 15 * scale;
+  const padding = 13 * scale;
+  const nameTextWidth = timesRomanBoldFont.widthOfTextAtSize(
     signatureName,
     textSize,
   );
-  const titleTextWidth = helveticaBoldFont.widthOfTextAtSize(
+  const titleTextWidth = timesRomanBoldFont.widthOfTextAtSize(
     signatureTitle,
     textSize,
   );
-  const textHeight = helveticaBoldFont.sizeAtHeight(textSize);
+  const textHeight = timesRomanBoldFont.sizeAtHeight(textSize);
   const lineHeight = textHeight / 10;
   const boxWidth = Math.max(nameTextWidth, titleTextWidth) + padding * 2;
   const boxHeight = textHeight * 2 + padding * 2;
@@ -197,14 +193,14 @@ exports.generateSignedDocumentInteractor = async ({
     y: rectangleY,
   });
   page.drawText(signatureName, {
-    font: helveticaBoldFont,
+    font: timesRomanBoldFont,
     rotate,
     size: textSize,
     x: sigNameX,
     y: sigNameY,
   });
   page.drawText(signatureTitle, {
-    font: helveticaBoldFont,
+    font: timesRomanBoldFont,
     rotate,
     size: textSize,
     x: sigTitleX,

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 const joi = require('joi');
 const {
   ANSWER_CUTOFF_AMOUNT_IN_DAYS,
@@ -17,12 +18,11 @@ const {
   MINUTE_ENTRIES_MAP,
   PARTY_TYPES,
   PAYMENT_STATUS,
+  PETITIONER_CONTACT_TYPES,
   PROCEDURE_TYPES,
   ROLES,
-  SERVICE_INDICATOR_TYPES,
   TRIAL_CITY_STRINGS,
   TRIAL_LOCATION_MATCHER,
-  UNIQUE_OTHER_FILER_TYPE,
 } = require('../EntityConstants');
 const {
   calculateDifferenceInDays,
@@ -160,11 +160,12 @@ Case.prototype.init = function init(
     this.assignFieldsForInternalUsers({ applicationContext, rawCase });
   }
 
+  // assignContacts needs to come first before assignDocketEntries
+  this.assignContacts({ applicationContext, filtered, rawCase });
   this.assignDocketEntries({ applicationContext, filtered, rawCase });
   this.assignHearings({ applicationContext, rawCase });
   this.assignPractitioners({ applicationContext, filtered, rawCase });
   this.assignFieldsForAllUsers({ applicationContext, filtered, rawCase });
-  this.assignContacts({ applicationContext, filtered, rawCase });
 };
 
 Case.prototype.assignFieldsForInternalUsers = function assignFieldsForInternalUsers({
@@ -264,7 +265,11 @@ Case.prototype.assignDocketEntries = function assignDocketEntries({
     this.docketEntries = rawCase.docketEntries
       .map(
         docketEntry =>
-          new DocketEntry(docketEntry, { applicationContext, filtered }),
+          new DocketEntry(docketEntry, {
+            applicationContext,
+            filtered,
+            petitioners: this.petitioners,
+          }),
       )
       .sort((a, b) => compareStrings(a.createdAt, b.createdAt));
 
@@ -304,7 +309,11 @@ Case.prototype.assignArchivedDocketEntries = function assignArchivedDocketEntrie
 }) {
   if (Array.isArray(rawCase.archivedDocketEntries)) {
     this.archivedDocketEntries = rawCase.archivedDocketEntries.map(
-      docketEntry => new DocketEntry(docketEntry, { applicationContext }),
+      docketEntry =>
+        new DocketEntry(docketEntry, {
+          applicationContext,
+          petitioners: this.petitioners,
+        }),
     );
   } else {
     this.archivedDocketEntries = [];
@@ -339,7 +348,7 @@ Case.prototype.assignContacts = function assignContacts({
         petitioner => new Petitioner(petitioner, { applicationContext }),
       );
 
-      this.setAdditionalNameOnPetitioners();
+      this.setAdditionalNameOnPetitioners(rawCase);
     }
   }
 };
@@ -646,8 +655,8 @@ Case.VALIDATION_RULES = {
     .array()
     .unique(
       (a, b) =>
-        a.otherFilerType === UNIQUE_OTHER_FILER_TYPE &&
-        b.otherFilerType === UNIQUE_OTHER_FILER_TYPE,
+        a.contactType === CONTACT_TYPES.intervenor &&
+        b.contactType === CONTACT_TYPES.intervenor,
     )
     .required(),
   preferredTrialCity: joi
@@ -900,6 +909,7 @@ Case.prototype.archiveDocketEntry = function (
 ) {
   const docketEntryToArchive = new DocketEntry(docketEntry, {
     applicationContext,
+    petitioners: this.petitioners,
   });
   docketEntryToArchive.archive();
   this.archivedDocketEntries.push(docketEntryToArchive);
@@ -1018,11 +1028,16 @@ Case.prototype.closeCase = function () {
 
 /**
  *
- * @param {Date} sendDate the time stamp when the case was sent to the IRS
  * @returns {Case} the updated case entity
  */
 Case.prototype.markAsSentToIRS = function () {
   this.status = CASE_STATUS_TYPES.generalDocket;
+
+  this.petitioners.map(p => {
+    if (PETITIONER_CONTACT_TYPES.includes(p.contactType)) {
+      p.contactType = CONTACT_TYPES.petitioner;
+    }
+  });
 
   return this;
 };
@@ -1064,7 +1079,7 @@ Case.prototype.updateCaseCaptionDocketRecord = function ({
           processingStatus: 'complete',
           userId,
         },
-        { applicationContext },
+        { applicationContext, petitioners: this.petitioners },
       ),
     );
   }
@@ -1114,7 +1129,7 @@ Case.prototype.updateDocketNumberRecord = function ({ applicationContext }) {
           processingStatus: 'complete',
           userId,
         },
-        { applicationContext },
+        { applicationContext, petitioners: this.petitioners },
       ),
     );
   }
@@ -1142,7 +1157,7 @@ Case.prototype.getDocketEntryById = function ({ docketEntryId }) {
  * @returns {Object} the contact object
  */
 const getPetitionerById = function (rawCase, contactId) {
-  return rawCase.petitioners.find(
+  return rawCase.petitioners?.find(
     petitioner => petitioner.contactId === contactId,
   );
 };
@@ -1175,10 +1190,36 @@ Case.prototype.addPetitioner = function (petitioner) {
  * @params {string} petitionerContactId the id of the petitioner
  * @returns {Object} the practitioner
  */
-Case.prototype.getPractitionersRepresenting = function (petitionerContactId) {
-  return this.privatePractitioners.filter(practitioner =>
+const getPractitionersRepresenting = function (rawCase, petitionerContactId) {
+  return rawCase.privatePractitioners.filter(practitioner =>
     practitioner.representing.includes(petitionerContactId),
   );
+};
+
+/**
+ * removes the contact from the practitioner they are presenting
+ *
+ * @params {string} petitionerContactId the id of the petitioner
+ */
+Case.prototype.removeRepresentingFromPractitioners = function (
+  petitionerContactId,
+) {
+  this.privatePractitioners.forEach(practitioner =>
+    practitioner.representing.splice(
+      practitioner.representing.indexOf(petitionerContactId),
+      1,
+    ),
+  );
+};
+
+/**
+ * returns the practitioner representing a petitioner
+ *
+ * @params {string} petitionerContactId the id of the petitioner
+ * @returns {Object} the practitioner
+ */
+Case.prototype.getPractitionersRepresenting = function (petitionerContactId) {
+  return getPractitionersRepresenting(this, petitionerContactId);
 };
 
 /**
@@ -1490,10 +1531,8 @@ const isAssociatedUser = function ({ caseRaw, user }) {
   const isPrivatePractitioner =
     caseRaw.privatePractitioners &&
     caseRaw.privatePractitioners.find(p => p.userId === user.userId);
-  const isPrimaryContact =
-    getContactPrimary(caseRaw)?.contactId === user.userId;
-  const isSecondaryContact =
-    getContactSecondary(caseRaw)?.contactId === user.userId;
+
+  const isPartyOnCase = !!getPetitionerById(caseRaw, user.userId);
 
   const isIrsSuperuser = user.role === ROLES.irsSuperuser;
 
@@ -1506,8 +1545,7 @@ const isAssociatedUser = function ({ caseRaw, user }) {
   return (
     isIrsPractitioner ||
     isPrivatePractitioner ||
-    isPrimaryContact ||
-    isSecondaryContact ||
+    isPartyOnCase ||
     (isIrsSuperuser && isPetitionServed)
   );
 };
@@ -1516,11 +1554,11 @@ const isAssociatedUser = function ({ caseRaw, user }) {
  * Computes and sets additionalName for contactPrimary depending on partyType
  *
  */
-Case.prototype.setAdditionalNameOnPetitioners = function () {
-  const contactPrimary = this.getContactPrimary(this);
+Case.prototype.setAdditionalNameOnPetitioners = function (rawCase) {
+  const contactPrimary = this.getContactPrimary(rawCase);
 
   if (contactPrimary && !contactPrimary.additionalName) {
-    switch (this.partyType) {
+    switch (rawCase.partyType) {
       case PARTY_TYPES.conservator:
       case PARTY_TYPES.custodian:
       case PARTY_TYPES.guardian:
@@ -1596,7 +1634,9 @@ const getContactSecondary = function (rawCase) {
  */
 const getOtherFilers = function (rawCase) {
   return rawCase.petitioners?.filter(
-    p => p.contactType === CONTACT_TYPES.otherFiler,
+    p =>
+      p.contactType === CONTACT_TYPES.participant ||
+      p.contactType === CONTACT_TYPES.intervenor,
   );
 };
 
@@ -1616,27 +1656,6 @@ Case.prototype.getContactSecondary = function () {
  */
 Case.prototype.getOtherFilers = function () {
   return getOtherFilers(this);
-};
-
-/**
- * Retrieves the other petitioners on the case
- *
- * @param {object} arguments.rawCase the raw case
- * @returns {Array} the other petitioners on the case
- */
-const getOtherPetitioners = function (rawCase) {
-  return rawCase.petitioners?.filter(
-    p => p.contactType === CONTACT_TYPES.otherPetitioner,
-  );
-};
-
-/**
- * Returns the other petitioners on the case
- *
- * @returns {Array} the other petitioners on the case
- */
-Case.prototype.getOtherPetitioners = function () {
-  return getOtherPetitioners(this);
 };
 
 /**
@@ -2162,21 +2181,47 @@ Case.prototype.deleteStatistic = function (statisticId) {
   return this;
 };
 
-Case.prototype.hasPartyWithPaperService = function () {
-  const contactSecondary = this.getContactSecondary();
+/**
+ * Returns true if at least one party on the case has the provided serviceIndicator type.
+ *
+ * @param {Object} rawCase the raw case object
+ * @param {string} serviceType the serviceIndicator type to check for
+ * @returns {Boolean} true if at least one party on the case has the provided serviceIndicator type, false otherwise.
+ */
+const hasPartyWithServiceType = function (rawCase, serviceType) {
   return (
-    this.getContactPrimary().serviceIndicator ===
-      SERVICE_INDICATOR_TYPES.SI_PAPER ||
-    (contactSecondary &&
-      contactSecondary.serviceIndicator === SERVICE_INDICATOR_TYPES.SI_PAPER) ||
-    (this.privatePractitioners &&
-      this.privatePractitioners.find(
-        pp => pp.serviceIndicator === SERVICE_INDICATOR_TYPES.SI_PAPER,
+    rawCase.petitioners.some(p => p.serviceIndicator === serviceType) ||
+    (rawCase.privatePractitioners &&
+      rawCase.privatePractitioners.find(
+        pp => pp.serviceIndicator === serviceType,
       )) ||
-    (this.irsPractitioners &&
-      this.irsPractitioners.find(
-        ip => ip.serviceIndicator === SERVICE_INDICATOR_TYPES.SI_PAPER,
-      ))
+    (rawCase.irsPractitioners &&
+      rawCase.irsPractitioners.find(ip => ip.serviceIndicator === serviceType))
+  );
+};
+
+/**
+ * Returns true if at least one party on the case has the provided serviceIndicator type.
+ *
+ * @param {string} serviceType the serviceIndicator type to check for
+ * @returns {Boolean} true if at least one party on the case has the provided serviceIndicator type, false otherwise.
+ */
+Case.prototype.hasPartyWithServiceType = function (serviceType) {
+  return hasPartyWithServiceType(this, serviceType);
+};
+
+/**
+ * Returns true if the case should be displayed as eligible for trial sessions
+ *
+ * @returns {Boolean} true if the case is eligible
+ */
+Case.prototype.getShouldHaveTrialSortMappingRecords = function () {
+  return !!(
+    (this.highPriority ||
+      this.status === CASE_STATUS_TYPES.generalDocketReadyForTrial) &&
+    this.preferredTrialCity &&
+    !this.blocked &&
+    (!this.automaticBlocked || (this.automaticBlocked && this.highPriority))
   );
 };
 
@@ -2201,9 +2246,10 @@ module.exports = {
   getContactPrimary,
   getContactSecondary,
   getOtherFilers,
-  getOtherPetitioners,
   getPetitionDocketEntry,
   getPetitionerById,
+  getPractitionersRepresenting,
+  hasPartyWithServiceType,
   isAssociatedUser,
   isSealedCase,
   isUserIdRepresentedByPrivatePractitioner,
