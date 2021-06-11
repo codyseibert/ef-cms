@@ -151,6 +151,9 @@ describe('partiesInformationHelper', () => {
             ],
           },
           permissions: {},
+          screenMetadata: {
+            pendingEmails: {},
+          },
         },
       });
 

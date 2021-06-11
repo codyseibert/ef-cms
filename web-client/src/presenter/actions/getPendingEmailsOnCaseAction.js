@@ -14,15 +14,9 @@ export const getPendingEmailsOnCaseAction = async ({
 }) => {
   let pendingEmails = {};
 
-  const { irsPractitioners, petitioners, privatePractitioners } = get(
-    state.caseDetail,
-  );
+  const { petitioners } = get(state.caseDetail);
 
-  const userIds = [
-    ...map(petitioners, 'contactId'),
-    ...map(irsPractitioners, 'userId'),
-    ...map(privatePractitioners, 'userId'),
-  ];
+  const userIds = [...map(petitioners, 'contactId')];
 
   if (userIds.length) {
     pendingEmails = await applicationContext
