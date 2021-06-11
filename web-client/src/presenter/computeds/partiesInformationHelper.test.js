@@ -418,7 +418,7 @@ describe('partiesInformationHelper', () => {
     });
   });
 
-  describe('formattedRespondents', () => {
+  describe.only('formattedRespondents', () => {
     it("should set formattedEmail to the counsel's email when it is defined and there is no pending email", () => {
       const result = runCompute(partiesInformationHelper, {
         state: {
@@ -458,18 +458,30 @@ describe('partiesInformationHelper', () => {
     });
 
     it('should set formattedEmail to undefined, and set formattedPending email when the respondent does not have an email but has a pending email', () => {
+      const mockIrsPractitioner2PendingEmail = 'beef@example.com';
+      const mockIrsPractitioner2 = {
+        barNumber: 'RT1111',
+        email: mockIrsPractitioner2PendingEmail,
+        name: 'Test IRS',
+        pendingEmail: mockIrsPractitioner2PendingEmail,
+        role: ROLES.irsPractitioner,
+        userId: '43b400ec-443d-4688-a35f-746af5cb2443',
+      };
+
       const result = runCompute(partiesInformationHelper, {
         state: {
           ...getBaseState(mockDocketClerk),
           caseDetail: {
-            irsPractitioners: [{ ...mockIrsPractitioner, email: undefined }],
+            irsPractitioners: [
+              {
+                ...mockIrsPractitioner,
+                email: mockEmail,
+                pendingEmail: mockEmail,
+              },
+              mockIrsPractitioner2,
+            ],
             petitioners: [],
             privatePractitioners: [],
-          },
-          screenMetadata: {
-            pendingEmails: {
-              [mockIrsPractitioner.userId]: mockEmail,
-            },
           },
         },
       });
@@ -477,6 +489,10 @@ describe('partiesInformationHelper', () => {
       expect(result.formattedRespondents[0].formattedEmail).toBeUndefined();
       expect(result.formattedRespondents[0].formattedPendingEmail).toBe(
         `${mockEmail} (Pending)`,
+      );
+      expect(result.formattedRespondents[1].formattedEmail).toBeUndefined();
+      expect(result.formattedRespondents[1].formattedPendingEmail).toBe(
+        `${mockIrsPractitioner2PendingEmail} (Pending)`,
       );
     });
 
