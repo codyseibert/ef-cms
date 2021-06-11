@@ -1,14 +1,11 @@
 import { capitalize } from 'lodash';
 import { state } from 'cerebral';
 
-const formatCounsel = ({ counsel, screenMetadata }) => {
-  // const counselPendingEmail = screenMetadata.pendingEmails
-  //   ? screenMetadata.pendingEmails[counsel.userId]
-  //   : undefined;
-
+const formatCounsel = ({ counsel }) => {
   if (counsel.pendingEmail) {
     counsel.formattedPendingEmail = `${counsel.pendingEmail} (Pending)`;
-  } else if (counsel.email && counsel.pendingEmail !== counsel.email) {
+  }
+  if (counsel.email && counsel.pendingEmail !== counsel.email) {
     counsel.formattedEmail = counsel.email;
   } else {
     counsel.formattedEmail = counsel.formattedPendingEmail
@@ -36,9 +33,7 @@ export const partiesInformationHelper = (get, applicationContext) => {
 
   const formattedPrivatePractitioners = (
     caseDetail.privatePractitioners || []
-  ).map(practitioner =>
-    formatCounsel({ counsel: practitioner, screenMetadata }),
-  );
+  ).map(practitioner => formatCounsel({ counsel: practitioner }));
 
   const formattedParties = (caseDetail.petitioners || []).map(petitioner => {
     const practitionersWithEmail = {
@@ -125,7 +120,7 @@ export const partiesInformationHelper = (get, applicationContext) => {
 
   const formattedRespondents = (caseDetail.irsPractitioners || []).map(
     respondent => ({
-      ...formatCounsel({ counsel: respondent, screenMetadata }),
+      ...formatCounsel({ counsel: respondent }),
       canEditRespondent,
     }),
   );

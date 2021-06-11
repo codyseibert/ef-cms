@@ -145,16 +145,12 @@ describe('partiesInformationHelper', () => {
             privatePractitioners: [
               {
                 ...mockPrivatePractitioner,
+                pendingEmail: mockPendingPractitionerEmail,
                 representing: [mockPetitioner.contactId],
               },
             ],
           },
           permissions: {},
-          screenMetadata: {
-            pendingEmails: {
-              [mockPrivatePractitioner.userId]: mockPendingPractitionerEmail,
-            },
-          },
         },
       });
 
@@ -418,7 +414,7 @@ describe('partiesInformationHelper', () => {
     });
   });
 
-  describe.only('formattedRespondents', () => {
+  describe('formattedRespondents', () => {
     it("should set formattedEmail to the counsel's email when it is defined and there is no pending email", () => {
       const result = runCompute(partiesInformationHelper, {
         state: {
@@ -502,15 +498,14 @@ describe('partiesInformationHelper', () => {
           ...getBaseState(mockDocketClerk),
           caseDetail: {
             irsPractitioners: [
-              { ...mockIrsPractitioner, email: 'lalal@example' },
+              {
+                ...mockIrsPractitioner,
+                email: 'lalal@example',
+                pendingEmail: mockEmail,
+              },
             ],
             petitioners: [],
             privatePractitioners: [],
-          },
-          screenMetadata: {
-            pendingEmails: {
-              [mockIrsPractitioner.userId]: mockEmail,
-            },
           },
         },
       });
@@ -528,14 +523,15 @@ describe('partiesInformationHelper', () => {
         state: {
           ...getBaseState(mockDocketClerk),
           caseDetail: {
-            irsPractitioners: [{ ...mockIrsPractitioner, email: mockEmail }],
+            irsPractitioners: [
+              {
+                ...mockIrsPractitioner,
+                email: mockEmail,
+                pendingEmail: mockEmail,
+              },
+            ],
             petitioners: [],
             privatePractitioners: [],
-          },
-          screenMetadata: {
-            pendingEmails: {
-              [mockIrsPractitioner.userId]: mockEmail,
-            },
           },
         },
       });
