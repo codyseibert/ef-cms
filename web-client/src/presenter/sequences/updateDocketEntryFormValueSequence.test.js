@@ -8,7 +8,9 @@ let mockCaseDetail;
 let mockFormState;
 
 describe('updateDocketEntryFormValueSequence', () => {
-  beforeAll(() => {
+  const { DOCUMENT_RELATIONSHIPS } = applicationContext.getConstants();
+
+  beforeEach(() => {
     presenter.providers.applicationContext = applicationContext;
     test = CerebralTest(presenter);
 
@@ -359,12 +361,14 @@ describe('updateDocketEntryFormValueSequence', () => {
     });
 
     it('unsets attachments and certificate of service date fields when props.key is previousDocument and state.screenMetadata.supporting is truthy', async () => {
-      // HERE HERE!
+      mockCaseDetail.docketEntries[0].relationship = undefined;
+
       test.setState('screenMetadata.supporting', true);
+      test.setState('screenMetadata.filedDocketEntryIds', ['123']);
 
       await test.runSequence('updateDocketEntryFormValueSequence', {
         key: 'previousDocument',
-        value: 'some_value',
+        value: mockCaseDetail.docketEntries[0].documentTitle,
       });
 
       expect(test.getState('form')).toEqual({
@@ -376,6 +380,115 @@ describe('updateDocketEntryFormValueSequence', () => {
         certificateOfServiceMonth: undefined,
         certificateOfServiceYear: undefined,
       });
+    });
+
+    it('merges screenMetadata.primary with thee form when props.key is previousDocument, state.screenMetadata.supporting is truthy, and the previous document relationship is primary', async () => {
+      mockCaseDetail.docketEntries[0].relationship =
+        DOCUMENT_RELATIONSHIPS.primary;
+
+      test.setState('screenMetadata.supporting', true);
+      test.setState('screenMetadata.filedDocketEntryIds', ['123']);
+      test.setState('screenMetadata.primary', { foo: 'bar' });
+      test.setState('screenMetadata.secondary', { bar: 'baz' });
+
+      await test.runSequence('updateDocketEntryFormValueSequence', {
+        key: 'previousDocument',
+        value: mockCaseDetail.docketEntries[0].documentTitle,
+      });
+
+      expect(test.getState('form')).toEqual({
+        ...mockFormState,
+        attachments: undefined,
+        certificateOfService: undefined,
+        certificateOfServiceDate: undefined,
+        certificateOfServiceDay: undefined,
+        certificateOfServiceMonth: undefined,
+        certificateOfServiceYear: undefined,
+        foo: 'bar', // from screenMetadata.primary
+      });
+    });
+
+    it('merges screenMetadata.primary with thee form when props.key is previousDocument, state.screenMetadata.supporting is truthy, and the previous document relationship is primary', async () => {
+      mockCaseDetail.docketEntries[0].relationship =
+        DOCUMENT_RELATIONSHIPS.secondary;
+
+      test.setState('screenMetadata.supporting', true);
+      test.setState('screenMetadata.filedDocketEntryIds', ['123']);
+      test.setState('screenMetadata.primary', { foo: 'bar' });
+      test.setState('screenMetadata.secondary', { bar: 'baz' });
+
+      await test.runSequence('updateDocketEntryFormValueSequence', {
+        key: 'previousDocument',
+        value: mockCaseDetail.docketEntries[0].documentTitle,
+      });
+
+      expect(test.getState('form')).toEqual({
+        ...mockFormState,
+        attachments: undefined,
+        bar: 'baz', // from screenMetadata.primary
+        certificateOfService: undefined,
+        certificateOfServiceDate: undefined,
+        certificateOfServiceDay: undefined,
+        certificateOfServiceMonth: undefined,
+        certificateOfServiceYear: undefined,
+      });
+    });
+  });
+
+  describe('additionalInfo', () => {
+    it('sets form.additionalInfo if the key is additionalInfo and has a value', async () => {
+      await test.runSequence('updateDocketEntryFormValueSequence', {
+        key: 'additionalInfo',
+        value: 'test value',
+      });
+
+      expect(test.getState('form.additionalInfo')).toEqual('test value');
+    });
+
+    it('unsets form.additionalInfo if the key is additionalInfo and has no value', async () => {
+      test.setState('form.additionalInfo', 'some_value');
+
+      await test.runSequence('updateDocketEntryFormValueSequence', {
+        key: 'additionalInfo',
+        value: '',
+      });
+
+      expect(test.getState('form.additionalInfo')).toBeUndefined();
+    });
+  });
+
+  describe('additionalInfo2', () => {
+    it('sets form.additionalInfo2 if the key is additionalInfo2 and has a value', async () => {
+      await test.runSequence('updateDocketEntryFormValueSequence', {
+        key: 'additionalInfo2',
+        value: 'test value',
+      });
+
+      expect(test.getState('form.additionalInfo2')).toEqual('test value');
+    });
+
+    it('unsets form.additionalInfo2 if the key is additionalInfo2 and has no value', async () => {
+      test.setState('form.additionalInfo2', 'some_value');
+
+      await test.runSequence('updateDocketEntryFormValueSequence', {
+        key: 'additionalInfo2',
+        value: '',
+      });
+
+      expect(test.getState('form.additionalInfo2')).toBeUndefined();
+    });
+  });
+
+  describe('hasOtherFilingParty', () => {
+    it('unsets form.hasOtherFilingParty if the key is hasOtherFilingParty', async () => {
+      test.setState('form.hasOtherFilingParty', 'some_value');
+
+      await test.runSequence('updateDocketEntryFormValueSequence', {
+        key: 'hasOtherFilingParty',
+        value: '',
+      });
+
+      expect(test.getState('form.hasOtherFilingParty')).toBeUndefined();
     });
   });
 });

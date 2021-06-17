@@ -134,7 +134,7 @@ export const updateDocketEntryWizardDataAction = ({
             caseDetail.docketEntries,
             doc =>
               includes(filedDocketEntryIds, doc.docketEntryId) &&
-              (doc.documentTitle || doc.documentType) === props.value,
+              (doc.documentTitle || doc.documentType) === props.value, // this appears to expect a document title while on the other action it appears to expect a docketEntryId
           );
         if (previousDocument.relationship === DOCUMENT_RELATIONSHIPS.PRIMARY) {
           store.merge(state.form, get(state.screenMetadata.primary));
