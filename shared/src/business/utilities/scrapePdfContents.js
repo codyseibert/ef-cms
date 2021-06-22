@@ -19,20 +19,23 @@ const scrapePdfContents = async ({ applicationContext, pdfBuffer }) => {
     for (let i = 1; i <= document.numPages; i++) {
       const page = await document.getPage(i);
       const pageTextContent = await page.getTextContent({
-        disableCombineTextItems: false,
-        normalizeWhitespace: false,
+        disableCombineTextItems: true, // TODO interesting...
+        // enableCombineItems: true
+        normalizeWhitespace: true, // TODO: hmm
       });
 
       let lastY = null,
         pageText = '';
 
-      for (let item of pageTextContent.items) {
-        if (lastY === item.transform[5] || !lastY) {
-          pageText += ' ' + item.str;
-        } else {
-          pageText += '\n' + item.str;
-        }
-        lastY = item.transform[5];
+      for (let item of pageTextContent.items.slice(0, 10)) {
+        pageText += item.str;
+        console.log(item);
+        // if (item.hasEOL) {
+        //   pageText += '~~~' + item.str;
+        // } else {
+        //   pageText += ' ' + item.str;
+        // }
+        // // lastY = item.transform[5];
       }
 
       if (!isEmpty(pageText)) {
@@ -50,3 +53,5 @@ const scrapePdfContents = async ({ applicationContext, pdfBuffer }) => {
 };
 
 exports.scrapePdfContents = scrapePdfContents;
+
+//   Home Latest Worship Information News  the presiding minister
