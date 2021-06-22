@@ -9,6 +9,8 @@ const { isEmpty } = require('lodash');
 const scrapePdfContents = async ({ applicationContext, pdfBuffer }) => {
   let pdfjsLib;
 
+  const neighborWordGapTolerance = 10;
+
   try {
     pdfjsLib = await applicationContext.getPdfJs();
 
@@ -19,23 +21,27 @@ const scrapePdfContents = async ({ applicationContext, pdfBuffer }) => {
     for (let i = 1; i <= document.numPages; i++) {
       const page = await document.getPage(i);
       const pageTextContent = await page.getTextContent({
-        disableCombineTextItems: true, // TODO interesting...
-        // enableCombineItems: true
-        normalizeWhitespace: true, // TODO: hmm
+        disableCombineTextItems: false,
+        normalizeWhitespace: true,
       });
 
-      let lastY = null,
-        pageText = '';
+      let lastY = null;
+      let lastEndX = 0;
+      let pageText = '';
 
-      for (let item of pageTextContent.items.slice(0, 10)) {
-        pageText += item.str;
-        console.log(item);
-        // if (item.hasEOL) {
-        //   pageText += '~~~' + item.str;
-        // } else {
-        //   pageText += ' ' + item.str;
-        // }
-        // // lastY = item.transform[5];
+      for (let item of pageTextContent.items) {
+        const [itemX, itemY] = [item.transform[4], item.transform[5]];
+        const readingNextWord = itemX - lastEndX > neighborWordGapTolerance;
+        if (lastY === itemY || !lastY) {
+          if (readingNextWord) {
+            pageText += ' ';
+          }
+          pageText += item.str;
+        } else {
+          pageText += '\n' + item.str;
+        }
+        lastY = itemY;
+        lastEndX = item.width + itemX;
       }
 
       if (!isEmpty(pageText)) {
@@ -53,5 +59,3 @@ const scrapePdfContents = async ({ applicationContext, pdfBuffer }) => {
 };
 
 exports.scrapePdfContents = scrapePdfContents;
-
-//   Home Latest Worship Information News  the presiding minister

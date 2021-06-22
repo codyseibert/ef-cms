@@ -17,25 +17,8 @@ describe('pdf things', () => {
         return pdfjsLib;
       },
     };
-    const result = (
-      await scrapePdfContents({ applicationContext, pdfBuffer })
-    ).slice(0, 800);
+    const result = await scrapePdfContents({ applicationContext, pdfBuffer });
     console.log('The results are', result);
     expect(true).toBe(true);
   });
 });
-
-/*
-Please check
-L1YtuY xlYxd slY t,,oc,oetsY hcavYuF sc ulcR Rlexl NOD SXINCUvDF bc. peu,.sY
-
-UNITE DISITD ISA XC OI
-RRRw.ustaxc.oswrcg
- v(NODIF v)NEEMTF
-vLMTSDT IPLT CO LONUIF gw
-vMSDIF
-LYseseciYovuF
-  kw
-LTININCU
-L1YtuY xlYxd slY t,,oc,oetsY hcavYuF sc ulcR Rlexl NOD SXINCUvDF bc. peu,.sYy
-*/
