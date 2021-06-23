@@ -21,7 +21,7 @@ const scrapePdfContents = async ({ applicationContext, pdfBuffer }) => {
     for (let i = 1; i <= document.numPages; i++) {
       const page = await document.getPage(i);
       const pageTextContent = await page.getTextContent({
-        disableCombineTextItems: false,
+        disableCombineTextItems: true,
         normalizeWhitespace: true,
       });
 
