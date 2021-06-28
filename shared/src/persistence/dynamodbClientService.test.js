@@ -1,18 +1,22 @@
 const {
-  applicationContext,
-} = require('../business/test/createTestApplicationContext');
-const {
+  abortTransactWrite,
   batchDelete,
   batchGet,
+  beginTransactWrite,
+  commitTransactWrite,
   delete: deleteObj,
   describeDeployTable,
   describeTable,
   get,
+  getTransactWriteInfo,
   put,
   query,
   queryFull,
   updateConsistent,
 } = require('./dynamodbClientService');
+const {
+  applicationContext,
+} = require('../business/test/createTestApplicationContext');
 
 describe('dynamodbClientService', function () {
   const MOCK_ITEM = {
@@ -109,6 +113,30 @@ describe('dynamodbClientService', function () {
     applicationContext.getDynamoClient = jest
       .fn()
       .mockImplementation(() => mockDynamoClient);
+  });
+
+  describe.only('transactions', () => {
+    let transactionId;
+    it('beginTransactWrite returns a unique transaction id', () => {
+      transactionId = beginTransactWrite();
+      expect(transactionId).toBeDefined();
+    });
+    describe('getTransactWriteInfo', () => {
+      it('returns an empty array of pending writes if provided valid transactionId', () => {
+        const pendingWrites = getTransactWriteInfo(transactionId);
+        expect(pendingWrites).toEqual([]);
+      });
+      it('returns undefined if provided an invalid transactionId', () => {
+        const pendingWrites = getTransactWriteInfo('invalid-transaction-id');
+        expect(pendingWrites).toBeUndefined();
+      });
+    });
+    it('abortTransactWrite removes pending list of writes when given valid transactionId', () => {
+      expect(getTransactWriteInfo(transactionId)).toBeDefined();
+      abortTransactWrite(transactionId);
+      expect(getTransactWriteInfo(transactionId)).toBeUndefined();
+    });
+    // it('returns a unique transaction id', () => {});
   });
 
   describe('put', () => {

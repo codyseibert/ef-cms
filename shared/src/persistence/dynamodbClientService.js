@@ -1,4 +1,40 @@
 const { chunk, isEmpty } = require('lodash');
+const { v4: uuidv4 } = require('uuid');
+
+const transactions = {};
+
+const getTransactionId = () => uuidv4();
+
+exports.beginTransactWrite = () => {
+  const transactionId = getTransactionId();
+  transactions[transactionId] = transactions[transactionId] || [];
+  return transactionId;
+};
+
+exports.getTransactWriteInfo = transactionId => {
+  return Array.from(transactions[transactionId]); // shallow copy
+};
+
+const pushTransactWrite = ({ transactionId, write }) => {
+  if (!transactions[transactionId]) {
+    throw new Error(`No transaction present with id ${transactionId}`);
+  }
+  transactions[transactionId].push(write);
+};
+
+exports.commitTransactWrite = async ({ applicationContext, transactionId }) => {
+  const params = {
+    TransactItems: transactions[transactionId],
+  };
+
+  await applicationContext.getDocumentClient().transactWrite(params).promise();
+
+  delete transactions[transactionId];
+};
+
+exports.abortTransactWrite = transactionId => {
+  delete transactions[transactionId];
+};
 
 /**
  * PUT for dynamodb aws-sdk client
@@ -78,15 +114,21 @@ exports.describeDeployTable = async ({ applicationContext }) => {
  * @returns {object} the item that was put
  */
 exports.put = params => {
+  const { transactionId } = params;
   const filteredParams = filterEmptyStrings(params);
+  const putArg = {
+    TableName: getTableName({
+      applicationContext: params.applicationContext,
+    }),
+    ...filteredParams,
+  };
+  if (transactionId) {
+    pushTransactWrite({ transactionId, write: { Put: putArg } });
+    return Promise.resolve();
+  }
   return params.applicationContext
     .getDocumentClient()
-    .put({
-      TableName: getTableName({
-        applicationContext: params.applicationContext,
-      }),
-      ...filteredParams,
-    })
+    .put(putArg)
     .promise()
     .then(() => params.Item);
 };
@@ -97,15 +139,21 @@ exports.put = params => {
  * @returns {object} the item that was updated
  */
 exports.update = params => {
+  const { transactionId } = params;
   const filteredParams = filterEmptyStrings(params);
+  const updateArg = {
+    TableName: getTableName({
+      applicationContext: params.applicationContext,
+    }),
+    ...filteredParams,
+  };
+  if (transactionId) {
+    pushTransactWrite({ transactionId, write: { Update: update } });
+    return Promise.resolve();
+  }
   return params.applicationContext
     .getDocumentClient()
-    .update({
-      TableName: getTableName({
-        applicationContext: params.applicationContext,
-      }),
-      ...filteredParams,
-    })
+    .update(updateArg)
     .promise()
     .then(() => params.Item);
 };
