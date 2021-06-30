@@ -1,3 +1,4 @@
+import { getFilerParties } from './getFilerParties';
 import { getSupportingDocumentTypeList } from './addDocketEntryHelper';
 import { state } from 'cerebral';
 
@@ -16,9 +17,8 @@ export const fileDocumentHelper = (get, applicationContext) => {
   const form = get(state.form);
   const validationErrors = get(state.validationErrors);
 
-  const supportingDocumentTypeList = getSupportingDocumentTypeList(
-    CATEGORY_MAP,
-  );
+  const supportingDocumentTypeList =
+    getSupportingDocumentTypeList(CATEGORY_MAP);
 
   const partyValidationError =
     validationErrors.filers || validationErrors.partyIrsPractitioner;
@@ -52,14 +52,12 @@ export const fileDocumentHelper = (get, applicationContext) => {
     {},
   );
 
-  const {
-    formattedSelectedCasesAsCase,
-    selectedCasesAsCase,
-  } = getFormattedSelectedCasesAsCase({
-    applicationContext,
-    cases: caseDetail.consolidatedCases || [],
-    selectedCasesMap,
-  });
+  const { formattedSelectedCasesAsCase, selectedCasesAsCase } =
+    getFormattedSelectedCasesAsCase({
+      applicationContext,
+      cases: caseDetail.consolidatedCases || [],
+      selectedCasesMap,
+    });
 
   const selectedDocketNumbers = get(state.form.selectedCases);
   const formattedDocketNumbers =
@@ -74,7 +72,8 @@ export const fileDocumentHelper = (get, applicationContext) => {
     CATEGORY_MAP,
     form,
   });
-  secondaryDocument.certificateOfServiceDateFormatted = secondaryDocumentCertificateOfServiceDateFormatted;
+  secondaryDocument.certificateOfServiceDateFormatted =
+    secondaryDocumentCertificateOfServiceDateFormatted;
 
   const showSecondaryProperties = getShowSecondaryProperties({
     PARTY_TYPES,
@@ -82,10 +81,10 @@ export const fileDocumentHelper = (get, applicationContext) => {
     form,
   });
 
-  const formattedFilingParties = applicationContext
-    .getUtilities()
-    .getFormattedPartiesNameAndTitle({ petitioners: caseDetail.petitioners })
-    .map(p => p.displayName);
+  const formattedFilingParties = getFilerParties({
+    caseDetail,
+    filersMap: form.filersMap,
+  });
 
   const exported = {
     certificateOfServiceDateFormatted,

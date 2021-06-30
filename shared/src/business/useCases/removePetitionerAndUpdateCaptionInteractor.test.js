@@ -47,6 +47,10 @@ describe('removePetitionerAndUpdateCaptionInteractor', () => {
 
     applicationContext
       .getPersistenceGateway()
+      .getFullCaseByDocketNumber.mockImplementation(() => mockCase);
+
+    applicationContext
+      .getPersistenceGateway()
       .deleteUserFromCase.mockImplementation(() => null);
   });
 
@@ -106,9 +110,9 @@ describe('removePetitionerAndUpdateCaptionInteractor', () => {
       docketNumber: MOCK_CASE.docketNumber,
     });
 
-    const {
-      caseToUpdate,
-    } = applicationContext.getUseCaseHelpers().updateCaseAndAssociations.mock.calls[0][0];
+    const { caseToUpdate } =
+      applicationContext.getUseCaseHelpers().updateCaseAndAssociations.mock
+        .calls[0][0];
 
     expect(
       getPetitionerById(caseToUpdate, petitionerToRemove.contactId),
@@ -138,9 +142,9 @@ describe('removePetitionerAndUpdateCaptionInteractor', () => {
       docketNumber: mockCase.docketNumber,
     });
 
-    const {
-      caseToUpdate,
-    } = applicationContext.getUseCaseHelpers().updateCaseAndAssociations.mock.calls[0][0];
+    const { caseToUpdate } =
+      applicationContext.getUseCaseHelpers().updateCaseAndAssociations.mock
+        .calls[0][0];
 
     expect(
       applicationContext.getPersistenceGateway().deleteUserFromCase.mock

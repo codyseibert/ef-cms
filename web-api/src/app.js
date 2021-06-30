@@ -123,6 +123,9 @@ const {
   generateDocketRecordPdfLambda,
 } = require('./cases/generateDocketRecordPdfLambda');
 const {
+  generatePractitionerCaseListPdfLambda,
+} = require('./cases/generatePractitionerCaseListPdfLambda');
+const {
   generatePrintableCaseInventoryReportLambda,
 } = require('./reports/generatePrintableCaseInventoryReportLambda');
 const {
@@ -237,9 +240,6 @@ const {
   getUsersPendingEmailLambda,
 } = require('./users/getUsersPendingEmailLambda');
 const {
-  getUsersPendingEmailStatusesLambda,
-} = require('./users/getUsersPendingEmailStatusesLambda');
-const {
   opinionAdvancedSearchLambda,
 } = require('./documents/opinionAdvancedSearchLambda');
 const {
@@ -336,9 +336,6 @@ const {
   updateOtherStatisticsLambda,
 } = require('./cases/updateOtherStatisticsLambda');
 const {
-  updatePetitionDetailsLambda,
-} = require('./cases/updatePetitionDetailsLambda');
-const {
   updatePetitionerInformationLambda,
 } = require('./cases/updatePetitionerInformationLambda');
 const {
@@ -403,6 +400,7 @@ const { swaggerJsonLambda } = require('./swagger/swaggerJsonLambda');
 const { swaggerLambda } = require('./swagger/swaggerLambda');
 const { unprioritizeCaseLambda } = require('./cases/unprioritizeCaseLambda');
 const { updateCaseContextLambda } = require('./cases/updateCaseContextLambda');
+const { updateCaseDetailsLambda } = require('./cases/updateCaseDetailsLambda');
 const { updateContactLambda } = require('./cases/updateContactLambda');
 const { validatePdfLambda } = require('./documents/validatePdfLambda');
 const { virusScanPdfLambda } = require('./documents/virusScanPdfLambda');
@@ -696,8 +694,8 @@ const { virusScanPdfLambda } = require('./documents/virusScanPdfLambda');
     lambdaWrapper(deleteCounselFromCaseLambda),
   );
   app.put(
-    '/case-parties/:docketNumber/petition-details',
-    lambdaWrapper(updatePetitionDetailsLambda),
+    '/case-parties/:docketNumber/case-details',
+    lambdaWrapper(updateCaseDetailsLambda),
   );
   app.put(
     '/case-parties/:docketNumber/petitioner-info',
@@ -811,6 +809,10 @@ app.post(
   app.put(
     '/async/practitioners/:barNumber',
     lambdaWrapper(updatePractitionerUserLambda),
+  );
+  app.get(
+    '/practitioners/:userId/printable-case-list',
+    lambdaWrapper(generatePractitionerCaseListPdfLambda),
   );
   app.get('/practitioners', lambdaWrapper(getPractitionersByNameLambda));
   app.post('/practitioners', lambdaWrapper(createPractitionerUserLambda));
@@ -958,10 +960,6 @@ app.get(
   lambdaWrapper(getUserPendingEmailLambda),
 );
 app.get('/users/pending-email', lambdaWrapper(getUsersPendingEmailLambda));
-app.get(
-  '/users/pending-email-status',
-  lambdaWrapper(getUsersPendingEmailStatusesLambda),
-);
 app.get(
   '/users/:userId/pending-email-status',
   lambdaWrapper(getUserPendingEmailStatusLambda),

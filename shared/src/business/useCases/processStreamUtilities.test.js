@@ -1,8 +1,9 @@
+/* eslint-disable max-lines */
 const {
-  filterRecords,
   partitionRecords,
   processCaseEntries,
   processDocketEntries,
+  processMessageEntries,
   processOtherEntries,
   processRemoveEntries,
   processWorkItemEntries,
@@ -18,101 +19,6 @@ describe('processStreamUtilities', () => {
     applicationContext
       .getPersistenceGateway()
       .bulkIndexRecords.mockReturnValue({ failedRecords: [] });
-  });
-
-  describe('filterRecords', () => {
-    const getMockRecord = ({
-      deleting = false,
-      id = null,
-      newTime = 'newTime',
-      oldTime = 'oldTime',
-      removeRecord = false,
-    }) => {
-      const mockRecord = {
-        dynamodb: {
-          NewImage: {
-            'aws:rep:deleting': {
-              BOOL: deleting,
-            },
-            'aws:rep:updatetime': {
-              N: newTime,
-            },
-          },
-          OldImage: {
-            'aws:rep:deleting': {
-              BOOL: false,
-            },
-            'aws:rep:updatetime': {
-              N: oldTime,
-            },
-          },
-        },
-        eventName: removeRecord ? 'REMOVE' : 'MODIFY',
-        id, // this is just an identifier for the test output and not actually on these records
-      };
-
-      if (removeRecord) {
-        delete mockRecord.dynamodb.NewImage; // remove events do not have a NewImage
-      }
-
-      return mockRecord;
-    };
-
-    beforeEach(() => {
-      process.env.NODE_ENV = 'production'; // necessary to evaluate other conditionals
-    });
-
-    afterEach(() => {
-      process.env.NODE_ENV = undefined; // resetting back after each test
-    });
-
-    it('filters out records with a deleting value of true', () => {
-      const record1 = getMockRecord({ deleting: true, id: '1' }); // should be filtered out
-      const record2 = getMockRecord({ id: '2' }); // should pass filter
-      const recordsToProcess = [record1, record2];
-
-      const result = recordsToProcess.filter(filterRecords);
-
-      expect(result).toMatchObject([record2]);
-    });
-
-    it('filters out records with where the updatetime did not change', () => {
-      const record1 = getMockRecord({
-        id: '1',
-        newTime: 'sameTime',
-        oldTime: 'sameTime',
-      }); // should be filtered out
-      const record2 = getMockRecord({
-        id: '2',
-        newTime: 'someTime',
-        oldTime: 'anotherTime',
-      }); // should pass filter
-      const recordsToProcess = [record1, record2];
-
-      const result = recordsToProcess.filter(filterRecords);
-
-      expect(result).toMatchObject([record2]);
-    });
-
-    it('returns records with a REMOVE event', () => {
-      const record1 = getMockRecord({
-        id: '1',
-        newTime: 'sameTime',
-        oldTime: 'sameTime',
-        removeRecord: false,
-      }); // should be filtered out
-      const record2 = getMockRecord({
-        id: '2',
-        newTime: 'sameTime',
-        oldTime: 'sameTime',
-        removeRecord: true,
-      }); // should pass filter
-      const recordsToProcess = [record1, record2];
-
-      const result = recordsToProcess.filter(filterRecords);
-
-      expect(result).toMatchObject([record2]);
-    });
   });
 
   describe('partitionRecords', () => {
@@ -174,6 +80,25 @@ describe('processStreamUtilities', () => {
         eventName: 'MODIFY',
       };
 
+      const messageRecord = {
+        dynamodb: {
+          Keys: {
+            pk: {
+              S: 'case|123-45',
+            },
+            sk: {
+              S: 'message|123',
+            },
+          },
+          NewImage: {
+            entityName: {
+              S: 'Message',
+            },
+          },
+        },
+        eventName: 'MODIFY',
+      };
+
       const otherRecord = {
         dynamodb: {
           Keys: {
@@ -197,6 +122,7 @@ describe('processStreamUtilities', () => {
         { ...removeRecord },
         { ...caseRecord },
         { ...docketEntryRecord },
+        { ...messageRecord },
         { ...otherRecord },
       ];
 
@@ -205,6 +131,7 @@ describe('processStreamUtilities', () => {
       expect(result).toMatchObject({
         caseEntityRecords: [caseRecord],
         docketEntryRecords: [docketEntryRecord],
+        messageRecords: [messageRecord],
         otherRecords: [otherRecord],
         removeRecords: [removeRecord],
       });
@@ -350,7 +277,7 @@ describe('processStreamUtilities', () => {
   });
 
   describe('processCaseEntries', () => {
-    const mockGetCase = jest.fn();
+    const mockGetCaseMetadataWithCounsel = jest.fn();
     const mockGetDocument = jest.fn();
 
     it('does nothing when no other records are found', async () => {
@@ -366,27 +293,57 @@ describe('processStreamUtilities', () => {
 
     it('attempts to bulk index the records passed in', async () => {
       const caseData = {
-        docketEntries: [],
         docketNumber: '123-45',
         entityName: 'Case',
+        irsPractitioners: [
+          {
+            name: 'bob',
+          },
+        ],
         pk: 'case|123-45',
+        privatePractitioners: [
+          {
+            name: 'jane',
+          },
+        ],
         sk: 'case|123-45',
       };
 
       const caseDataMarshalled = {
-        docketEntries: { L: [] },
         docketNumber: { S: '123-45' },
         entityName: { S: 'Case' },
+        irsPractitioners: {
+          L: [
+            {
+              M: {
+                name: {
+                  S: 'bob',
+                },
+              },
+            },
+          ],
+        },
         pk: { S: 'case|123-45' },
+        privatePractitioners: {
+          L: [
+            {
+              M: {
+                name: {
+                  S: 'jane',
+                },
+              },
+            },
+          ],
+        },
         sk: { S: 'case|123-45' },
       };
 
-      mockGetCase.mockReturnValue({
+      mockGetCaseMetadataWithCounsel.mockReturnValue({
         ...caseData,
       });
 
       const utils = {
-        getCase: mockGetCase,
+        getCaseMetadataWithCounsel: mockGetCaseMetadataWithCounsel,
         getDocument: mockGetDocument,
       };
 
@@ -407,7 +364,7 @@ describe('processStreamUtilities', () => {
         utils,
       });
 
-      expect(mockGetCase).toHaveBeenCalled();
+      expect(mockGetCaseMetadataWithCounsel).toHaveBeenCalled();
 
       expect(
         applicationContext.getPersistenceGateway().bulkIndexRecords.mock
@@ -420,7 +377,29 @@ describe('processStreamUtilities', () => {
               case_relations: { name: 'case' },
               docketNumber: { S: '123-45' },
               entityName: { S: 'CaseDocketEntryMapping' },
+              irsPractitioners: {
+                L: [
+                  {
+                    M: {
+                      name: {
+                        S: 'bob',
+                      },
+                    },
+                  },
+                ],
+              },
               pk: { S: 'case|123-45' },
+              privatePractitioners: {
+                L: [
+                  {
+                    M: {
+                      name: {
+                        S: 'jane',
+                      },
+                    },
+                  },
+                ],
+              },
               sk: { S: 'case|123-45' },
             },
           },
@@ -453,12 +432,12 @@ describe('processStreamUtilities', () => {
         sk: { S: 'case|123-45' },
       };
 
-      mockGetCase.mockReturnValue({
+      mockGetCaseMetadataWithCounsel.mockReturnValue({
         ...caseData,
       });
 
       const utils = {
-        getCase: mockGetCase,
+        getCaseMetadataWithCounsel: mockGetCaseMetadataWithCounsel,
         getDocument: mockGetDocument,
       };
       applicationContext
@@ -489,7 +468,6 @@ describe('processStreamUtilities', () => {
   });
 
   describe('processDocketEntries', () => {
-    const mockGetCase = jest.fn();
     const mockGetDocument = jest.fn();
 
     const docketEntryData = {
@@ -506,96 +484,9 @@ describe('processStreamUtilities', () => {
       sk: { S: 'docket-entry|123' },
     };
 
-    const caseData = {
-      caseCaption: 'hello world',
-      contactPrimary: {
-        name: 'bob',
-      },
-      contactSecondary: null,
-      docketEntries: [docketEntryData],
-      docketNumber: '123-45',
-      docketNumberSuffix: 'W',
-      docketNumberWithSuffix: '123-45W',
-      entityName: 'Case',
-      irsPractitioners: [
-        {
-          userId: 'abc-123',
-        },
-      ],
-      isSealed: null,
-      pk: 'case|123-45',
-      privatePractitioners: [
-        {
-          userId: 'abc-123',
-        },
-      ],
-      sealedDate: null,
-      sk: 'case|123-45',
-    };
-
-    const caseDataMarshalled = {
-      caseCaption: { S: 'hello world' },
-      contactPrimary: {
-        M: {
-          name: {
-            S: 'bob',
-          },
-        },
-      },
-      contactSecondary: {
-        NULL: true,
-      },
-      docketEntries: {
-        L: [{ M: docketEntryDataMarshalled }],
-      },
-      docketNumber: { S: '123-45' },
-      docketNumberSuffix: {
-        S: 'W',
-      },
-      docketNumberWithSuffix: {
-        S: '123-45W',
-      },
-      entityName: { S: 'Case' },
-      irsPractitioners: {
-        L: [
-          {
-            M: {
-              userId: {
-                S: 'abc-123',
-              },
-            },
-          },
-        ],
-      },
-      isSealed: {
-        NULL: true,
-      },
-      pk: { S: 'case|123-45' },
-      privatePractitioners: {
-        L: [
-          {
-            M: {
-              userId: {
-                S: 'abc-123',
-              },
-            },
-          },
-        ],
-      },
-      sealedDate: {
-        NULL: true,
-      },
-      sk: { S: 'case|123-45' },
-    };
-
-    mockGetCase.mockReturnValue({
-      ...caseData,
-    });
-
     mockGetDocument.mockReturnValue('[{ "documentContents": "Test"}]');
 
     const utils = {
-      getCase: mockGetCase,
       getDocument: mockGetDocument,
     };
 
@@ -629,9 +520,6 @@ describe('processStreamUtilities', () => {
       });
 
       expect(mockGetDocument).not.toHaveBeenCalled();
-
-      const docketEntryCase = { ...caseDataMarshalled };
-      delete docketEntryCase.docketEntries;
 
       expect(
         applicationContext.getPersistenceGateway().bulkIndexRecords.mock
@@ -679,11 +567,6 @@ describe('processStreamUtilities', () => {
       });
 
       expect(mockGetDocument).toHaveBeenCalled();
-
-      const docketEntryCase = {
-        ...caseDataMarshalled,
-      };
-      delete docketEntryCase.docketEntries;
 
       expect(
         applicationContext.getPersistenceGateway().bulkIndexRecords.mock
@@ -776,11 +659,6 @@ describe('processStreamUtilities', () => {
 
       expect(mockGetDocument).toHaveBeenCalled();
 
-      const docketEntryCase = {
-        ...caseDataMarshalled,
-      };
-      delete docketEntryCase.docketEntries;
-
       expect(
         applicationContext.getPersistenceGateway().bulkIndexRecords.mock
           .calls[0][0].records,
@@ -828,11 +706,6 @@ describe('processStreamUtilities', () => {
 
       expect(mockGetDocument).not.toHaveBeenCalled();
 
-      const docketEntryCase = {
-        ...caseDataMarshalled,
-      };
-      delete docketEntryCase.docketEntries;
-
       expect(
         applicationContext.getPersistenceGateway().bulkIndexRecords.mock
           .calls[0][0].records,
@@ -854,6 +727,207 @@ describe('processStreamUtilities', () => {
           eventName: 'MODIFY',
         },
       ]);
+    });
+  });
+
+  describe('processMessageEntries', () => {
+    const utils = {};
+    let mockGetMessage;
+
+    const messageData = {
+      docketNumber: '123-45',
+      entityName: 'Message',
+      isRepliedTo: false,
+      messageId: '09b15337-e9db-45e9-9c8b-2946049965d1',
+      pk: 'case|123-45',
+      sk: 'message|09b15337-e9db-45e9-9c8b-2946049965d1',
+    };
+
+    const messageDataMarshalled = {
+      docketNumber: { S: '123-45' },
+      entityName: { S: 'Message' },
+      isRepliedTo: { BOOL: false },
+      messageId: { S: '09b15337-e9db-45e9-9c8b-2946049965d1' },
+      pk: { S: 'case|123-45' },
+      sk: { S: 'message|09b15337-e9db-45e9-9c8b-2946049965d1' },
+    };
+
+    beforeEach(() => {
+      mockGetMessage = jest.fn().mockReturnValue({
+        ...messageData,
+      });
+
+      utils.getMessage = mockGetMessage;
+    });
+
+    it('does nothing when no message records are found', async () => {
+      await processMessageEntries({
+        applicationContext,
+        messageRecords: [],
+      });
+
+      expect(
+        applicationContext.getPersistenceGateway().bulkIndexRecords,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('attempts to bulk index the records passed in', async () => {
+      await processMessageEntries({
+        applicationContext,
+        messageRecords: [
+          {
+            dynamodb: {
+              Keys: {
+                pk: { S: messageData.pk },
+                sk: { S: messageData.sk },
+              },
+              NewImage: messageDataMarshalled,
+            },
+            eventName: 'MODIFY',
+          },
+        ],
+        utils,
+      });
+
+      expect(mockGetMessage).toHaveBeenCalled();
+
+      expect(
+        applicationContext.getPersistenceGateway().bulkIndexRecords.mock
+          .calls[0][0].records,
+      ).toEqual([
+        {
+          dynamodb: {
+            Keys: { pk: { S: messageData.pk }, sk: { S: messageData.sk } },
+            NewImage: messageDataMarshalled,
+          },
+          eventName: 'MODIFY',
+        },
+      ]);
+    });
+
+    it('calls getMessage to get the latest message if the messageNewImage.isRepliedTo is false', async () => {
+      await processMessageEntries({
+        applicationContext,
+        messageRecords: [
+          {
+            dynamodb: {
+              Keys: {
+                pk: { S: messageData.pk },
+                sk: { S: messageData.sk },
+              },
+              NewImage: {
+                ...messageDataMarshalled,
+                isRepliedTo: { BOOL: false },
+              },
+            },
+            eventName: 'MODIFY',
+          },
+        ],
+        utils,
+      });
+
+      expect(mockGetMessage).toHaveBeenCalled();
+    });
+
+    it('attempts to bulk index the data returned from getMessage instead of the NewImage if the messageNewImage.isRepliedTo is false and the message from dynamo has isRepliedTo = false', async () => {
+      mockGetMessage = jest.fn().mockReturnValue({
+        ...messageData,
+        isRepliedTo: false,
+      });
+      utils.getMessage = mockGetMessage;
+
+      await processMessageEntries({
+        applicationContext,
+        messageRecords: [
+          {
+            dynamodb: {
+              Keys: {
+                pk: { S: messageData.pk },
+                sk: { S: messageData.sk },
+              },
+              NewImage: {
+                ...messageDataMarshalled,
+                isRepliedTo: { BOOL: false },
+              },
+            },
+            eventName: 'MODIFY',
+          },
+        ],
+        utils,
+      });
+
+      expect(
+        applicationContext.getPersistenceGateway().bulkIndexRecords.mock
+          .calls[0][0].records,
+      ).toEqual([
+        {
+          dynamodb: {
+            Keys: { pk: { S: messageData.pk }, sk: { S: messageData.sk } },
+            NewImage: {
+              ...messageDataMarshalled,
+              isRepliedTo: { BOOL: false },
+            },
+          },
+          eventName: 'MODIFY',
+        },
+      ]);
+    });
+
+    it('does not return any data to be indexed if the messageNewImage.isRepliedTo is false and the message from dynamo has isRepliedTo = true', async () => {
+      mockGetMessage = jest.fn().mockReturnValue({
+        ...messageData,
+        isRepliedTo: true,
+      });
+      utils.getMessage = mockGetMessage;
+
+      await processMessageEntries({
+        applicationContext,
+        messageRecords: [
+          {
+            dynamodb: {
+              Keys: {
+                pk: { S: messageData.pk },
+                sk: { S: messageData.sk },
+              },
+              NewImage: {
+                ...messageDataMarshalled,
+                isRepliedTo: { BOOL: false },
+              },
+            },
+            eventName: 'MODIFY',
+          },
+        ],
+        utils,
+      });
+
+      expect(
+        applicationContext.getPersistenceGateway().bulkIndexRecords.mock
+          .calls[0][0].records,
+      ).toEqual([]);
+    });
+
+    it('does not call getMessage to get the latest message if the messageNewImage.isRepliedTo is true', async () => {
+      await processMessageEntries({
+        applicationContext,
+        messageRecords: [
+          {
+            dynamodb: {
+              Keys: {
+                pk: { S: messageData.pk },
+                sk: { S: messageData.sk },
+              },
+              NewImage: {
+                ...messageDataMarshalled,
+                isRepliedTo: { BOOL: true },
+              },
+            },
+            eventName: 'MODIFY',
+          },
+        ],
+        utils,
+      });
+
+      expect(mockGetMessage).not.toHaveBeenCalled();
     });
   });
 

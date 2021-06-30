@@ -4,6 +4,7 @@ const {
 const {
   DOCKET_SECTION,
   DOCUMENT_PROCESSING_STATUS_OPTIONS,
+  SERVICE_INDICATOR_TYPES,
 } = require('../entities/EntityConstants');
 const { addCoverToPdf } = require('./addCoversheetInteractor');
 const { Case } = require('../entities/cases/Case');
@@ -139,11 +140,16 @@ exports.updateContactInteractor = async (
 
     changeOfAddressDocketEntry.setAsServed(servedParties.all);
 
-    const privatePractitionersRepresentingContact = caseEntity.isUserIdRepresentedByPrivatePractitioner(
-      contactInfo.contactId,
+    const privatePractitionersRepresentingContact =
+      caseEntity.isUserIdRepresentedByPrivatePractitioner(
+        contactInfo.contactId,
+      );
+
+    const partyWithPaperService = caseEntity.hasPartyWithServiceType(
+      SERVICE_INDICATOR_TYPES.SI_PAPER,
     );
 
-    if (!privatePractitionersRepresentingContact) {
+    if (!privatePractitionersRepresentingContact || partyWithPaperService) {
       const workItem = new WorkItem(
         {
           assigneeId: null,

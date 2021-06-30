@@ -1,15 +1,15 @@
 const {
-  filterRecords,
   partitionRecords,
   processCaseEntries,
   processDocketEntries,
+  processMessageEntries,
   processOtherEntries,
   processRemoveEntries,
   processWorkItemEntries,
 } = require('./processStreamUtilities');
 
 const getCase = ({ applicationContext: appContext, docketNumber }) =>
-  appContext.getPersistenceGateway().getFullCaseByDocketNumber({
+  appContext.getPersistenceGateway().getCaseByDocketNumber({
     applicationContext: appContext,
     docketNumber,
   });
@@ -22,6 +22,26 @@ const getDocument = ({ applicationContext: appContext, documentContentsId }) =>
     useTempBucket: false,
   });
 
+const getCaseMetadataWithCounsel = ({
+  applicationContext: appContext,
+  docketNumber,
+}) =>
+  appContext.getPersistenceGateway().getCaseMetadataWithCounsel({
+    applicationContext: appContext,
+    docketNumber,
+  });
+
+const getMessage = ({
+  applicationContext: appContext,
+  docketNumber,
+  messageId,
+}) =>
+  appContext.getPersistenceGateway().getMessageById({
+    applicationContext: appContext,
+    docketNumber,
+    messageId,
+  });
+
 /**
  * @param {object} applicationContext the application context
  * @param {object} providers the providers object
@@ -32,11 +52,10 @@ exports.processStreamRecordsInteractor = async (
   applicationContext,
   { recordsToProcess },
 ) => {
-  recordsToProcess = recordsToProcess.filter(filterRecords);
-
   const {
     caseEntityRecords,
     docketEntryRecords,
+    messageRecords,
     otherRecords,
     removeRecords,
     workItemRecords,
@@ -44,7 +63,9 @@ exports.processStreamRecordsInteractor = async (
 
   const utils = {
     getCase,
+    getCaseMetadataWithCounsel,
     getDocument,
+    getMessage,
   };
 
   try {
@@ -52,7 +73,9 @@ exports.processStreamRecordsInteractor = async (
       applicationContext,
       removeRecords,
     }).catch(err => {
-      applicationContext.logger.error("failed to processRemoveEntries',", err);
+      applicationContext.logger.error('failed to processRemoveEntries', {
+        err,
+      });
       throw err;
     });
 
@@ -61,7 +84,9 @@ exports.processStreamRecordsInteractor = async (
       caseEntityRecords,
       utils,
     }).catch(err => {
-      applicationContext.logger.error("failed to processCaseEntries',", err);
+      applicationContext.logger.error('failed to processCaseEntries', {
+        err,
+      });
       throw err;
     });
 
@@ -70,30 +95,44 @@ exports.processStreamRecordsInteractor = async (
       docketEntryRecords,
       utils,
     }).catch(err => {
-      applicationContext.logger.error("failed to processDocketEntries',", err);
+      applicationContext.logger.error('failed to processDocketEntries', {
+        err,
+      });
       throw err;
     });
 
     await processWorkItemEntries({ applicationContext, workItemRecords }).catch(
       err => {
-        applicationContext.logger.error(
-          "failed to process workItem records',",
+        applicationContext.logger.error('failed to process workItem records', {
           err,
-        );
+        });
         throw err;
       },
     );
 
+    await processMessageEntries({
+      applicationContext,
+      messageRecords,
+      utils,
+    }).catch(err => {
+      applicationContext.logger.error('failed to process message records', {
+        err,
+      });
+      throw err;
+    });
+
     await processOtherEntries({ applicationContext, otherRecords }).catch(
       err => {
-        applicationContext.logger.error("failed to processOtherEntries',", err);
+        applicationContext.logger.error('failed to processOtherEntries', {
+          err,
+        });
         throw err;
       },
     );
   } catch (err) {
     applicationContext.logger.error(
       'processStreamRecordsInteractor failed to process the records',
-      err,
+      { err },
     );
     throw err;
   }

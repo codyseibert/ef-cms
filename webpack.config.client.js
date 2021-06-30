@@ -46,6 +46,7 @@ module.exports = {
       ENV: null,
       FILE_UPLOAD_MODAL_TIMEOUT: null,
       NO_SCANNER: null,
+      PUBLIC_SITE_URL: null,
       SCANNER_RESOURCE_URI: null,
       SESSION_MODAL_TIMEOUT: null,
       SESSION_TIMEOUT: null,
@@ -60,10 +61,11 @@ module.exports = {
     }),
     new CopyPlugin({
       patterns: [
-        { from: 'node_modules/pdfjs-dist/es5/build', to: '.' },
+        { from: 'node_modules/pdfjs-dist/legacy/build', to: '.' },
         { from: 'node_modules/react-quill/dist', to: '.' },
         { from: 'node_modules/pdf-lib/dist', to: '.' },
         { from: 'web-client/src/favicons', to: '.' },
+        { from: 'web-client/src/site.webmanifest', to: '.' },
       ],
     }),
   ],
