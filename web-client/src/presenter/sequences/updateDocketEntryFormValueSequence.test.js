@@ -1,15 +1,12 @@
 import { CerebralTest } from 'cerebral/test';
 import { applicationContextForClient as applicationContext } from '../../../../shared/src/business/test/createTestApplicationContext';
 import { presenter } from '../presenter';
-// import { updateDocketEntryFormValueSequence } from './updateDocketEntryFormValueSequence';
 
 let test;
 let mockCaseDetail;
 let mockFormState;
 
 describe('updateDocketEntryFormValueSequence', () => {
-  const { DOCUMENT_RELATIONSHIPS } = applicationContext.getConstants();
-
   beforeEach(() => {
     presenter.providers.applicationContext = applicationContext;
     test = CerebralTest(presenter);
@@ -181,9 +178,8 @@ describe('updateDocketEntryFormValueSequence', () => {
       });
     });
 
-    it('unsets form.previousDocument when the props.key is eventCode and state.screenMetadata.supporting is falsy', async () => {
+    it('unsets form.previousDocument when the props.key is eventCode', async () => {
       test.setState('form.previousDocument', {});
-      test.setState('screenMetadata.supporting', undefined);
 
       await test.runSequence('updateDocketEntryFormValueSequence', {
         key: 'eventCode',
@@ -201,103 +197,6 @@ describe('updateDocketEntryFormValueSequence', () => {
         ordinalValue: undefined,
         pending: undefined,
         previousDocument: undefined,
-        scenario: 'Standard',
-        secondaryDocument: undefined,
-        serviceDate: undefined,
-        serviceDateDay: undefined,
-        serviceDateMonth: undefined,
-        serviceDateYear: undefined,
-        trialLocation: undefined,
-      });
-    });
-
-    it('sets form.previousDocument and merges screenMetadata.primary when the props.key is eventCode and there is one docketEntryId in screenMetadata.filedDocketEntryIds matching an entry in the currentCaseDetail.docketEntries', async () => {
-      test.setState('form.previousDocument', {});
-      test.setState('screenMetadata.supporting', true);
-      test.setState('screenMetadata.filedDocketEntryIds', ['234']);
-      test.setState('screenMetadata.primary', { foo: 'bar' });
-
-      await test.runSequence('updateDocketEntryFormValueSequence', {
-        key: 'eventCode',
-        value: 'ACED',
-      });
-
-      expect(test.getState('form')).toEqual({
-        ...mockFormState,
-        category: 'Decision',
-        documentTitle: 'Agreed Computation for Entry of Decision',
-        documentType: 'Agreed Computation for Entry of Decision',
-        eventCode: 'ACED',
-        foo: 'bar', // from screenMetadata.primary
-        freeText: undefined,
-        objections: undefined,
-        ordinalValue: undefined,
-        pending: undefined,
-        previousDocument: mockCaseDetail.docketEntries[1],
-        scenario: 'Standard',
-        secondaryDocument: undefined,
-        serviceDate: undefined,
-        serviceDateDay: undefined,
-        serviceDateMonth: undefined,
-        serviceDateYear: undefined,
-        trialLocation: undefined,
-      });
-    });
-
-    it('does not set form.previousDocument or merge screenMetadata.primary when the props.key is eventCode and there is more than one docketEntryId in screenMetadata.filedDocketEntryIds', async () => {
-      test.setState('form.previousDocument', {});
-      test.setState('screenMetadata.supporting', true);
-      test.setState('screenMetadata.filedDocketEntryIds', ['123', '234']);
-      test.setState('screenMetadata.primary', { foo: 'bar' });
-
-      await test.runSequence('updateDocketEntryFormValueSequence', {
-        key: 'eventCode',
-        value: 'ACED',
-      });
-
-      expect(test.getState('form')).toEqual({
-        ...mockFormState,
-        category: 'Decision',
-        documentTitle: 'Agreed Computation for Entry of Decision',
-        documentType: 'Agreed Computation for Entry of Decision',
-        eventCode: 'ACED',
-        freeText: undefined,
-        objections: undefined,
-        ordinalValue: undefined,
-        pending: undefined,
-        previousDocument: {},
-        scenario: 'Standard',
-        secondaryDocument: undefined,
-        serviceDate: undefined,
-        serviceDateDay: undefined,
-        serviceDateMonth: undefined,
-        serviceDateYear: undefined,
-        trialLocation: undefined,
-      });
-    });
-
-    it('does not set form.previousDocument or merge screenMetadata.primary when the props.key is eventCode and there is one docketEntryId in screenMetadata.filedDocketEntryIds that does not match an entry in the currentCaseDetail.docketEntries', async () => {
-      test.setState('form.previousDocument', {});
-      test.setState('screenMetadata.supporting', true);
-      test.setState('screenMetadata.filedDocketEntryIds', ['nope']);
-      test.setState('screenMetadata.primary', { foo: 'bar' });
-
-      await test.runSequence('updateDocketEntryFormValueSequence', {
-        key: 'eventCode',
-        value: 'ACED',
-      });
-
-      expect(test.getState('form')).toEqual({
-        ...mockFormState,
-        category: 'Decision',
-        documentTitle: 'Agreed Computation for Entry of Decision',
-        documentType: 'Agreed Computation for Entry of Decision',
-        eventCode: 'ACED',
-        freeText: undefined,
-        objections: undefined,
-        ordinalValue: undefined,
-        pending: undefined,
-        previousDocument: {},
         scenario: 'Standard',
         secondaryDocument: undefined,
         serviceDate: undefined,
@@ -342,95 +241,6 @@ describe('updateDocketEntryFormValueSequence', () => {
       expect(test.getState('form')).toEqual({
         ...mockFormState,
         secondaryDocument: undefined,
-      });
-    });
-  });
-
-  describe('previousDocument', () => {
-    it('makes no states changes when props.key is previousDocument and state.screenMetadata.supporting is falsy', async () => {
-      test.setState('screenMetadata.supporting', undefined);
-
-      await test.runSequence('updateDocketEntryFormValueSequence', {
-        key: 'previousDocument',
-        value: 'some_value',
-      });
-
-      expect(test.getState('form')).toEqual({
-        ...mockFormState,
-      });
-    });
-
-    it('unsets attachments and certificate of service date fields when props.key is previousDocument and state.screenMetadata.supporting is truthy', async () => {
-      mockCaseDetail.docketEntries[0].relationship = undefined;
-
-      test.setState('screenMetadata.supporting', true);
-      test.setState('screenMetadata.filedDocketEntryIds', ['123']);
-
-      await test.runSequence('updateDocketEntryFormValueSequence', {
-        key: 'previousDocument',
-        value: mockCaseDetail.docketEntries[0].documentTitle,
-      });
-
-      expect(test.getState('form')).toEqual({
-        ...mockFormState,
-        attachments: undefined,
-        certificateOfService: undefined,
-        certificateOfServiceDate: undefined,
-        certificateOfServiceDay: undefined,
-        certificateOfServiceMonth: undefined,
-        certificateOfServiceYear: undefined,
-      });
-    });
-
-    it('merges screenMetadata.primary with thee form when props.key is previousDocument, state.screenMetadata.supporting is truthy, and the previous document relationship is primary', async () => {
-      mockCaseDetail.docketEntries[0].relationship =
-        DOCUMENT_RELATIONSHIPS.primary;
-
-      test.setState('screenMetadata.supporting', true);
-      test.setState('screenMetadata.filedDocketEntryIds', ['123']);
-      test.setState('screenMetadata.primary', { foo: 'bar' });
-      test.setState('screenMetadata.secondary', { bar: 'baz' });
-
-      await test.runSequence('updateDocketEntryFormValueSequence', {
-        key: 'previousDocument',
-        value: mockCaseDetail.docketEntries[0].documentTitle,
-      });
-
-      expect(test.getState('form')).toEqual({
-        ...mockFormState,
-        attachments: undefined,
-        certificateOfService: undefined,
-        certificateOfServiceDate: undefined,
-        certificateOfServiceDay: undefined,
-        certificateOfServiceMonth: undefined,
-        certificateOfServiceYear: undefined,
-        foo: 'bar', // from screenMetadata.primary
-      });
-    });
-
-    it('merges screenMetadata.primary with thee form when props.key is previousDocument, state.screenMetadata.supporting is truthy, and the previous document relationship is primary', async () => {
-      mockCaseDetail.docketEntries[0].relationship =
-        DOCUMENT_RELATIONSHIPS.secondary;
-
-      test.setState('screenMetadata.supporting', true);
-      test.setState('screenMetadata.filedDocketEntryIds', ['123']);
-      test.setState('screenMetadata.primary', { foo: 'bar' });
-      test.setState('screenMetadata.secondary', { bar: 'baz' });
-
-      await test.runSequence('updateDocketEntryFormValueSequence', {
-        key: 'previousDocument',
-        value: mockCaseDetail.docketEntries[0].documentTitle,
-      });
-
-      expect(test.getState('form')).toEqual({
-        ...mockFormState,
-        attachments: undefined,
-        bar: 'baz', // from screenMetadata.primary
-        certificateOfService: undefined,
-        certificateOfServiceDate: undefined,
-        certificateOfServiceDay: undefined,
-        certificateOfServiceMonth: undefined,
-        certificateOfServiceYear: undefined,
       });
     });
   });

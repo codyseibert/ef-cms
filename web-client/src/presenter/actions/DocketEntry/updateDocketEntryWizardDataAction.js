@@ -1,4 +1,4 @@
-import { find, includes, omit, pick } from 'lodash';
+import { find, omit, pick } from 'lodash';
 import { state } from 'cerebral';
 
 const setDocumentPropsFromFormAndBaseDocument = ({
@@ -37,9 +37,7 @@ export const updateDocketEntryWizardDataAction = ({
   props,
   store,
 }) => {
-  const { DOCUMENT_RELATIONSHIPS } = applicationContext.getConstants();
   let form;
-  let supporting = get(state.screenMetadata.supporting);
   switch (props.key) {
     case 'initEventCode':
       form = setDocumentPropsFromFormAndBaseDocument({
@@ -64,26 +62,8 @@ export const updateDocketEntryWizardDataAction = ({
         propertyList: ['category', 'documentType', 'documentTitle', 'scenario'],
       });
       store.set(state.form, form);
-      if (!supporting) {
-        store.unset(state.form.previousDocument);
-      } else {
-        //if there is only one previously selected doc, default that selection on the form
-        const filedDocketEntryIds = get(
-          state.screenMetadata.filedDocketEntryIds,
-        );
-        if (filedDocketEntryIds.length === 1) {
-          const caseDetail = get(state.caseDetail);
 
-          const previousDocument = find(caseDetail.docketEntries, doc =>
-            includes(filedDocketEntryIds, doc.docketEntryId),
-          );
-          if (previousDocument) {
-            store.set(state.form.previousDocument, previousDocument);
-
-            store.merge(state.form, get(state.screenMetadata.primary));
-          }
-        }
-      }
+      store.unset(state.form.previousDocument);
       store.unset(state.form.serviceDate);
       store.unset(state.form.serviceDateDay);
       store.unset(state.form.serviceDateMonth);
@@ -111,38 +91,6 @@ export const updateDocketEntryWizardDataAction = ({
 
       if (!props.value) {
         store.unset(state.form.secondaryDocument);
-      }
-      break;
-    case 'previousDocument':
-      if (supporting) {
-        store.unset(state.form.attachments);
-        store.unset(state.form.certificateOfService);
-        store.unset(state.form.certificateOfServiceDate);
-        store.unset(state.form.certificateOfServiceMonth);
-        store.unset(state.form.certificateOfServiceDay);
-        store.unset(state.form.certificateOfServiceYear);
-
-        //restore previous doc data from screenMetadata onto form
-        const caseDetail = get(state.caseDetail);
-        const filedDocketEntryIds = get(
-          state.screenMetadata.filedDocketEntryIds,
-        );
-
-        const previousDocument =
-          props.value &&
-          find(
-            caseDetail.docketEntries,
-            doc =>
-              includes(filedDocketEntryIds, doc.docketEntryId) &&
-              (doc.documentTitle || doc.documentType) === props.value, // this appears to expect a document title while on the other action it appears to expect a docketEntryId
-          );
-        if (previousDocument.relationship === DOCUMENT_RELATIONSHIPS.PRIMARY) {
-          store.merge(state.form, get(state.screenMetadata.primary));
-        } else if (
-          previousDocument.relationship === DOCUMENT_RELATIONSHIPS.SECONDARY
-        ) {
-          store.merge(state.form, get(state.screenMetadata.secondary));
-        }
       }
       break;
     case 'additionalInfo':
