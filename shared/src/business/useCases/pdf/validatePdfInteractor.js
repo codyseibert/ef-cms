@@ -34,21 +34,16 @@ const normalizePdf = async ({ applicationContext, key, pdfDoc }) => {
   if (!needsResize) {
     return true;
   }
-  const pdfDocScaled = await PDFDocument.create();
 
   pdfPages.forEach(page => {
-    const { width } = page.getSize();
+    const { height, width } = page.getSize();
     if (width > MAX_PAGE_WIDTH) {
-      // const scaledPage = pdfDocScaled.addPage(PageSizes.Letter);
-      // pdfDocScaled.copyPages()
-      page.setSize(PageSizes.Letter);
-      pdfDocScaled.addPage(page);
-    } else {
-      pdfDocScaled.addPage(page);
+      const scaleRatio = MAX_PAGE_WIDTH / width;
+      scaleContent(page, MAX_PAGE_WIDTH, height * scaleRatio);
     }
   });
 
-  const scaledPdfData = await pdfDocScaled.save();
+  const scaledPdfData = await pdfDoc.save();
 
   await applicationContext.getPersistenceGateway().saveDocumentFromLambda({
     applicationContext,
@@ -56,6 +51,26 @@ const normalizePdf = async ({ applicationContext, key, pdfDoc }) => {
     key,
   });
 };
+
+// scales the content of the page (not annotations)
+/**
+ *
+ */
+function scaleContent(page, x, y) {
+  // load dependencies
+  const { popGraphicsState, pushGraphicsState, scale } = require('pdf-lib');
+
+  page.node.normalize();
+  page.getContentStream();
+
+  const start = page.createContentStream(pushGraphicsState(), scale(x, y));
+  const startRef = page.doc.context.register(start);
+
+  const end = page.createContentStream(popGraphicsState());
+  const endRef = page.doc.context.register(end);
+
+  page.node.wrapContentStreams(startRef, endRef);
+}
 
 /**
  * validatePdfInteractor
@@ -112,7 +127,7 @@ exports.validatePdfInteractor = async (applicationContext, { key }) => {
     throw new Error('pdf pages cannot be read');
   }
 
-  await normalizePdf({ applicationContext, key, pdfDoc });
+  // await normalizePdf({ applicationContext, key, pdfDoc });
 
   return true;
 };
