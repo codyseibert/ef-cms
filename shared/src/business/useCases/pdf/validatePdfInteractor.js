@@ -15,6 +15,49 @@ const removePdf = async ({
 exports.removePdf = removePdf;
 
 /**
+ * normalizePdfInteractor
+ *
+ * @param {object} applicationContext the application context
+ * @param {object} providers the providers object
+ * @param {string} providers.key the key of the document to validate
+ * @returns {object} errors (null if no errors)
+ */
+const normalizePdf = async ({ applicationContext, key, pdfDoc }) => {
+  const { PageSizes, PDFDocument } = await applicationContext.getPdfLib();
+  const [MAX_PAGE_WIDTH] = PageSizes.Letter;
+
+  const pdfPages = pdfDoc.getPages();
+  const needsResize = pdfPages.some(
+    page => page.getSize().width > MAX_PAGE_WIDTH,
+  );
+
+  if (!needsResize) {
+    return true;
+  }
+  const pdfDocScaled = await PDFDocument.create();
+
+  pdfPages.forEach(page => {
+    const { width } = page.getSize();
+    if (width > MAX_PAGE_WIDTH) {
+      // const scaledPage = pdfDocScaled.addPage(PageSizes.Letter);
+      // pdfDocScaled.copyPages()
+      page.setSize(PageSizes.Letter);
+      pdfDocScaled.addPage(page);
+    } else {
+      pdfDocScaled.addPage(page);
+    }
+  });
+
+  const scaledPdfData = await pdfDocScaled.save();
+
+  await applicationContext.getPersistenceGateway().saveDocumentFromLambda({
+    applicationContext,
+    document: scaledPdfData,
+    key,
+  });
+};
+
+/**
  * validatePdfInteractor
  *
  * @param {object} applicationContext the application context
@@ -68,6 +111,8 @@ exports.validatePdfInteractor = async (applicationContext, { key }) => {
 
     throw new Error('pdf pages cannot be read');
   }
+
+  await normalizePdf({ applicationContext, key, pdfDoc });
 
   return true;
 };
