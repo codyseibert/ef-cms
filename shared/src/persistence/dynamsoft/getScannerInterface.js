@@ -117,7 +117,8 @@ exports.getScannerInterface = () => {
   };
 
   const startScanSession = ({ applicationContext, scanMode }) => {
-    const { SCAN_MODES } = applicationContext.getConstants();
+    const { COVER_SHEET_WIDTH_IN_PX, SCAN_MODES } =
+      applicationContext.getConstants();
     const duplexEnabled = scanMode === SCAN_MODES.DUPLEX;
     const feederEnabled = scanMode !== SCAN_MODES.FLATBED;
 
@@ -146,8 +147,6 @@ exports.getScannerInterface = () => {
 
         return Promise.all(promises)
           .then(async blobs => {
-            const COVER_SHEET_WIDTH_IN_PX = 866;
-
             const scaledDownBlobs = await Promise.all(
               blobs.map(blob =>
                 applicationContext

@@ -59,6 +59,12 @@ exports.uploadExternalDocumentsInteractor = async (
         key,
       });
 
+    await applicationContext
+      .getUseCases()
+      .normalizePdfInteractor(applicationContext, {
+        key,
+      });
+
     return key;
   };
 
