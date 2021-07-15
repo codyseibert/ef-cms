@@ -20,6 +20,7 @@ export const DocumentSearchResults = connect(
     openCaseDocumentDownloadUrlSequence,
     showMoreResultsSequence,
   }) {
+    const renderId = Math.random().toString().slice(2, 9);
     return (
       <div aria-live="polite">
         {advancedDocumentSearchHelper.showSearchResults && (
@@ -51,49 +52,53 @@ export const DocumentSearchResults = connect(
               </thead>
               <tbody>
                 {advancedDocumentSearchHelper.formattedSearchResults.map(
-                  (result, idx) => (
-                    <tr className="search-result" key={result.docketEntryId}>
-                      <td aria-hidden="true" className="small-column">
-                        {idx + 1}
-                      </td>
-                      <td aria-hidden="true" className="small-column">
-                        {advancedDocumentSearchHelper.showSealedIcon &&
-                          result.isSealed && (
-                            <Icon
-                              aria-label="sealed"
-                              className="iconSealed"
-                              icon={['fa', 'lock']}
-                              size="1x"
-                            />
-                          )}
-                      </td>
-                      <td>
-                        <CaseLink formattedCase={result} />
-                      </td>
-                      <td>{result.caseTitle}</td>
-                      <td>
-                        <Button
-                          link
-                          onClick={() => {
-                            openCaseDocumentDownloadUrlSequence({
-                              docketEntryId: result.docketEntryId,
-                              docketNumber: result.docketNumber,
-                              isPublic: advancedDocumentSearchHelper.isPublic,
-                              useSameTab: advancedDocumentSearchHelper.isPublic,
-                            });
-                          }}
-                        >
-                          {result.documentTitle}
-                        </Button>
-                      </td>
-                      <td>{result.numberOfPages}</td>
-                      <td>{result.formattedFiledDate}</td>
-                      <td>
-                        {result.formattedSignedJudgeName ||
-                          result.formattedJudgeName}
-                      </td>
-                    </tr>
-                  ),
+                  (result, idx) => {
+                    const rowKey = `${idx}-${result.docketEntryId}-${renderId}`;
+                    return (
+                      <tr className="search-result" key={rowKey}>
+                        <td aria-hidden="true" className="small-column">
+                          {idx + 1}
+                        </td>
+                        <td aria-hidden="true" className="small-column">
+                          {advancedDocumentSearchHelper.showSealedIcon &&
+                            result.isSealed && (
+                              <Icon
+                                aria-label="sealed"
+                                className="iconSealed"
+                                icon={['fa', 'lock']}
+                                size="1x"
+                              />
+                            )}
+                        </td>
+                        <td>
+                          <CaseLink formattedCase={result} />
+                        </td>
+                        <td>{result.caseTitle}</td>
+                        <td>
+                          <Button
+                            link
+                            onClick={() => {
+                              openCaseDocumentDownloadUrlSequence({
+                                docketEntryId: result.docketEntryId,
+                                docketNumber: result.docketNumber,
+                                isPublic: advancedDocumentSearchHelper.isPublic,
+                                useSameTab:
+                                  advancedDocumentSearchHelper.isPublic,
+                              });
+                            }}
+                          >
+                            {result.documentTitle}
+                          </Button>
+                        </td>
+                        <td>{result.numberOfPages}</td>
+                        <td>{result.formattedFiledDate}</td>
+                        <td>
+                          {result.formattedSignedJudgeName ||
+                            result.formattedJudgeName}
+                        </td>
+                      </tr>
+                    );
+                  },
                 )}
               </tbody>
             </table>
