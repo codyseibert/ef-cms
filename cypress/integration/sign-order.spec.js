@@ -13,4 +13,6 @@ describe('Sign order', function () {
   it('should display the signature warning banner on hover', () => {
     hoverOverSignatureWarning().should('have.css', 'color', 'rgb(0, 0, 0)');
   });
+
+  // TODO: add signing and serving
 });
