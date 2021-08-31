@@ -2,6 +2,17 @@
 const moo = require('moo');
 // https://github.com/no-context/moo
 
+exports.OPERATOR_MAP = {
+  AND: '+',
+  NOT: '!',
+  OR: '|',
+};
+
+const caseInsensitiveKeywords = map => {
+  const transform = moo.keywords(map);
+  return text => transform(text.toUpperCase());
+};
+
 // order of keys in the below rules are important.
 const USTC_LEXER_RULES = {
   // NL: { lineBreaks: true, match: /\n/ },
@@ -11,9 +22,14 @@ const USTC_LEXER_RULES = {
   andOp: '+',
   notOp: '-',
   orOp: '|',
-  keyword: ['AND', 'OR', 'NOT', 'and', 'or', 'not'],
+  term: {
+    match: /[a-zA-Z]+/,
+    type: caseInsensitiveKeywords({
+      keyword: ['AND', 'NOT', 'OR'],
+    }),
+  },
   phrase: /"(?:\\["\\]|[^\n"\\])*"/,
-  string: /[^-+|\s"()]+/,
+  other: /[^-+|\s"()]+/,
 };
 
 const lexer = moo.compile(USTC_LEXER_RULES);
@@ -28,13 +44,14 @@ exports.parse = expression => {
   return tokens;
 };
 
-// exports.tokenTransform = token => {
-//   let result = token.text;
-//   if(token.type === 'keyword') {
-//     switch(token.)
-//   }
-// };
+const tokenTransform = token => {
+  if(token.type === 'keyword') {
+    // return exports.OPERATOR_MAP[token.value.toUpperCase()];
+    return token.value.toUpperCase();
+  }
+  return token.text;
+}
 
-// exports.compile = parsedTokens => {
-//   return parsedTokens.map(tokenTransform).join();
-// };
+exports.compile = parsedTokens => {
+  return parsedTokens.map(token => token.value).join();
+};
