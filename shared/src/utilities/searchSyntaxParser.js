@@ -4,7 +4,7 @@ const moo = require('moo');
 
 exports.OPERATOR_MAP = {
   AND: '+',
-  NOT: '!',
+  NOT: '-',
   OR: '|',
 };
 
@@ -15,7 +15,6 @@ const caseInsensitiveKeywords = map => {
 
 // order of keys in the below rules are important.
 const USTC_LEXER_RULES = {
-  // NL: { lineBreaks: true, match: /\n/ },
   whitespace: { lineBreaks: false, match: /[ \t]+/ },
   lparen: '(',
   rparen: ')',
@@ -45,13 +44,14 @@ exports.parse = expression => {
 };
 
 const tokenTransform = token => {
-  if(token.type === 'keyword') {
-    // return exports.OPERATOR_MAP[token.value.toUpperCase()];
-    return token.value.toUpperCase();
+  if (token.type === 'keyword') {
+    return exports.OPERATOR_MAP[token.value.toUpperCase()];
   }
-  return token.text;
-}
+  return token.value;
+};
 
-exports.compile = parsedTokens => {
-  return parsedTokens.map(token => token.value).join();
+exports.translate = expression => {
+  const parsedTokens = exports.parse(expression);
+  const result = parsedTokens.map(tokenTransform).join('');
+  return result;
 };
