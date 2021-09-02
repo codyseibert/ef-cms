@@ -173,7 +173,7 @@ exports.generateChangeOfAddress = async ({
  * @param {object} providers.user the user object that includes userId, barNumber etc.
  * @returns {Promise<User[]>} the internal users
  */
-const generateAndServeDocketEntry = async ({
+export const generateAndServeDocketEntry = async ({
   applicationContext,
   caseEntity,
   newData,

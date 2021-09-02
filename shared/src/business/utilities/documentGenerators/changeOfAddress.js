@@ -9,10 +9,13 @@ const changeOfAddress = async ({ applicationContext, content }) => {
     caseTitle,
     docketNumberWithSuffix,
     documentTitle,
+    eventCode,
     name,
     newData,
     oldData,
   } = content;
+
+  const isChangeOfEmail = eventCode === 'NCOP';
 
   const changeOfAddressTemplate = reactTemplateGenerator({
     componentName: 'ChangeOfAddress',
@@ -25,6 +28,7 @@ const changeOfAddress = async ({ applicationContext, content }) => {
         caseTitle,
         docketNumberWithSuffix,
         h3: documentTitle,
+        isChangeOfEmail,
         showAddressAndPhoneChange:
           documentTitle === 'Notice of Change of Address and Telephone Number',
         showOnlyPhoneChange:

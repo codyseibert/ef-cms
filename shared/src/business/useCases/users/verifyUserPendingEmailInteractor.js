@@ -1,12 +1,18 @@
 const {
-  isAuthorized,
-  ROLE_PERMISSIONS,
-} = require('../../../authorization/authorizationClientService');
+  calculateISODate,
+  dateStringsCompared,
+} = require('../../utilities/DateHandler');
 const {
+  CASE_STATUS_TYPES,
   ROLES,
   SERVICE_INDICATOR_TYPES,
 } = require('../../entities/EntityConstants');
+const {
+  isAuthorized,
+  ROLE_PERMISSIONS,
+} = require('../../../authorization/authorizationClientService');
 const { Case } = require('../../entities/cases/Case');
+const { generateAndServeDocketEntry } = require('./generateChangeOfAddress');
 const { Practitioner } = require('../../entities/Practitioner');
 const { UnauthorizedError } = require('../../../errors/errors');
 const { User } = require('../../entities/User');
@@ -25,6 +31,8 @@ const updateCasesForPetitioner = async ({
     ),
   );
 
+  let oldEmail;
+
   const validatedCasesToUpdate = casesToUpdate
     .map(caseToUpdate => {
       const caseEntity = new Case(caseToUpdate, {
@@ -32,6 +40,8 @@ const updateCasesForPetitioner = async ({
       });
 
       const petitionerObject = caseEntity.getPetitionerById(user.userId);
+      oldEmail = petitionerObject.email;
+
       if (!petitionerObject) {
         applicationContext.logger.error(
           `Could not find user|${user.userId} on ${caseEntity.docketNumber}`,
@@ -58,14 +68,36 @@ const updateCasesForPetitioner = async ({
     // any undefined values by filtering for truthy objects.
     .filter(Boolean);
 
-  return Promise.all(
-    validatedCasesToUpdate.map(caseToUpdate =>
-      applicationContext.getUseCaseHelpers().updateCaseAndAssociations({
+  const updateAndSendNotice = async caseToUpdate => {
+    await applicationContext.getUseCaseHelpers().updateCaseAndAssociations({
+      applicationContext,
+      caseToUpdate,
+    });
+
+    const maxClosedDate = calculateISODate({
+      howMuch: -6,
+      units: 'months',
+    });
+    const isOpen = ![CASE_STATUS_TYPES.closed, CASE_STATUS_TYPES.new].includes(
+      caseToUpdate.status,
+    );
+    const isRecent =
+      caseToUpdate.closedDate &&
+      dateStringsCompared(caseToUpdate.closedDate, maxClosedDate) >= 0;
+
+    if (isOpen || isRecent) {
+      await generateAndServeDocketEntry({
         applicationContext,
         caseToUpdate,
-      }),
-    ),
-  );
+        newData: user.email,
+        oldData: oldEmail,
+        practitionerName,
+        user,
+      });
+    }
+  };
+
+  return Promise.all(validatedCasesToUpdate.map(updateAndSendNotice));
 };
 
 exports.updateCasesForPetitioner = updateCasesForPetitioner;

@@ -53,6 +53,7 @@ const getDocumentTypeForAddressChange = ({ diff, newData, oldData }) => {
     addressFields.includes(field),
   );
   const isPhoneChange = !!initialDiff.phone;
+  //FIXME
 
   if (isAddressChange && !isPhoneChange) {
     documentType = {
