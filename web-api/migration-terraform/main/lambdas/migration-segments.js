@@ -1,10 +1,15 @@
 const AWS = require('aws-sdk');
 const createApplicationContext = require('../../../src/applicationContext');
 const promiseRetry = require('promise-retry');
-
 const {
-  migrateItems: devexMigration0037,
-} = require('./migrations/devex-0037-combine-work-items');
+  migrateItems: bugMigration0039,
+} = require('./migrations/bug-0039-notice-of-trial-date');
+const {
+  migrateItems: migration0001,
+} = require('./migrations/0001-update-websockets-gsi1pk');
+const {
+  migrateItems: migration0040,
+} = require('./migrations/bug-0040-case-received-at');
 const {
   migrateItems: validationMigration,
 } = require('./migrations/0000-validate-all-items');
@@ -26,15 +31,26 @@ const dynamoDbDocumentClient = new AWS.DynamoDB.DocumentClient({
 
 const sqs = new AWS.SQS({ region: 'us-east-1' });
 
-// eslint-disable-next-line no-unused-vars
 const migrateRecords = async ({
+  // eslint-disable-next-line no-unused-vars
   documentClient,
   items,
+  // eslint-disable-next-line no-unused-vars
   ranMigrations = {},
 }) => {
-  if (!ranMigrations['devex-0037-combine-work-items.js']) {
-    applicationContext.logger.debug('about to run devex migration 0037');
-    items = await devexMigration0037(items, documentClient);
+  if (!ranMigrations['0001-update-websockets-gsi1pk.js']) {
+    applicationContext.logger.debug('about to run migration 0001');
+    items = migration0001(items);
+  }
+
+  if (!ranMigrations['bug-0040-case-received-at.js']) {
+    applicationContext.logger.debug('about to run migration 0040');
+    items = await migration0040(items, documentClient);
+  }
+
+  if (!ranMigrations['bug-0039-notice-of-trial-date.js']) {
+    applicationContext.logger.debug('about to run bug migration 0039');
+    items = await bugMigration0039(items, documentClient);
   }
 
   applicationContext.logger.debug('about to run validation migration');
@@ -114,6 +130,7 @@ const scanTableSegment = async (segment, totalSegments, ranMigrations) => {
   }
 };
 
+// eslint-disable-next-line
 const hasMigrationRan = async key => {
   const { Item } = await dynamoDbDocumentClient
     .get({
@@ -137,7 +154,9 @@ exports.handler = async event => {
   );
 
   const ranMigrations = {
-    ...(await hasMigrationRan('devex-0037-combine-work-items.js')),
+    ...(await hasMigrationRan('0001-update-websockets-gsi1pk.js')),
+    ...(await hasMigrationRan('bug-0039-notice-of-trial-date.js')),
+    ...(await hasMigrationRan('bug-0040-case-received-at.js')),
   };
 
   await scanTableSegment(segment, totalSegments, ranMigrations);

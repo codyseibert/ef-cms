@@ -6,7 +6,6 @@ const {
   CASE_STATUS_TYPES,
   COURT_ISSUED_EVENT_CODES,
   DOCKET_SECTION,
-  ROLES,
   SERVICE_INDICATOR_TYPES,
   TRANSCRIPT_EVENT_CODE,
   TRIAL_SESSION_PROCEEDING_TYPES,
@@ -17,67 +16,51 @@ const {
 const {
   fileAndServeCourtIssuedDocumentInteractor,
 } = require('../courtIssuedDocument/fileAndServeCourtIssuedDocumentInteractor');
+const { addServedStampToDocument } = require('./addServedStampToDocument');
 const { Case } = require('../../entities/cases/Case');
 const { createISODateString } = require('../../utilities/DateHandler');
+const { docketClerkUser } = require('../../../test/mockUsers');
 const { MOCK_CASE } = require('../../../test/mockCase');
 const { v4: uuidv4 } = require('uuid');
 
+jest.mock('./addServedStampToDocument', () => ({
+  addServedStampToDocument: jest.fn(),
+}));
+
 describe('fileAndServeCourtIssuedDocumentInteractor', () => {
   let caseRecord;
+  let mockTrialSession;
 
-  const mockUser = {
-    name: 'Docket Clerk',
-    role: ROLES.docketClerk,
-    section: DOCKET_SECTION,
-    userId: '2474e5c0-f741-4120-befa-b77378ac8bf0',
-  };
-
-  const mockUserId = applicationContext.getUniqueId();
   const mockPdfUrl = 'www.example.com';
   const mockWorkItem = {
-    docketNumber: '101-20',
+    docketNumber: MOCK_CASE.docketNumber,
     section: DOCKET_SECTION,
-    sentBy: mockUser.name,
-    sentByUserId: mockUser.userId,
+    sentBy: docketClerkUser.name,
+    sentByUserId: docketClerkUser.userId,
     workItemId: 'b4c7337f-9ca0-45d9-9396-75e003f81e32',
   };
 
   const mockDocketEntryWithWorkItem = {
     docketEntryId: 'c54ba5a9-b37b-479d-9201-067ec6e335ba',
-    docketNumber: '45678-18',
+    docketNumber: MOCK_CASE.docketNumber,
     documentTitle: 'Order',
     documentType: 'Order',
     eventCode: 'O',
     signedAt: '2019-03-01T21:40:46.415Z',
-    signedByUserId: mockUserId,
+    signedByUserId: docketClerkUser.userId,
     signedJudgeName: 'Dredd',
-    userId: mockUserId,
+    userId: docketClerkUser.userId,
     workItem: mockWorkItem,
   };
 
-  const dynamicallyGeneratedDocketEntries = [];
   const docketEntriesWithCaseClosingEventCodes =
     ENTERED_AND_SERVED_EVENT_CODES.map(eventCode => {
-      const docketEntryId = uuidv4();
-      const docketRecordId = uuidv4();
-
-      const index = dynamicallyGeneratedDocketEntries.length + 2; // 2 statically set docket records per case;
-
-      dynamicallyGeneratedDocketEntries.push({
-        docketEntryId,
-        docketRecordId,
-        documentTitle: `Docket Record ${index}`,
-        eventCode: 'O',
-        filingDate: createISODateString(),
-        index,
-      });
-
       const eventCodeMap = COURT_ISSUED_EVENT_CODES.find(
         entry => entry.eventCode === eventCode,
       );
 
       return {
-        docketEntryId,
+        docketEntryId: uuidv4(),
         documentType: eventCodeMap.documentType,
         eventCode,
         signedAt: createISODateString(),
@@ -88,12 +71,24 @@ describe('fileAndServeCourtIssuedDocumentInteractor', () => {
       };
     });
 
+  beforeAll(() => {
+    applicationContext
+      .getPersistenceGateway()
+      .saveDocumentFromLambda.mockImplementation(() => {});
+
+    applicationContext
+      .getUseCaseHelpers()
+      .serveDocumentAndGetPaperServicePdf.mockReturnValue({
+        pdfUrl: mockPdfUrl,
+      });
+  });
+
   beforeEach(() => {
     applicationContext
       .getPersistenceGateway()
-      .getUserById.mockReturnValue(mockUser);
+      .getUserById.mockReturnValue(docketClerkUser);
 
-    applicationContext.getCurrentUser.mockReturnValue(mockUser);
+    applicationContext.getCurrentUser.mockReturnValue(docketClerkUser);
 
     caseRecord = {
       ...MOCK_CASE,
@@ -101,28 +96,62 @@ describe('fileAndServeCourtIssuedDocumentInteractor', () => {
         mockDocketEntryWithWorkItem,
         {
           docketEntryId: 'c54ba5a9-b37b-479d-9201-067ec6e335bc',
-          docketNumber: '45678-18',
+          docketNumber: MOCK_CASE.docketNumber,
           documentTitle: 'Order to Show Cause',
           documentType: 'Order to Show Cause',
           eventCode: 'OSC',
           signedAt: '2019-03-01T21:40:46.415Z',
-          signedByUserId: mockUserId,
+          signedByUserId: docketClerkUser.userId,
           signedJudgeName: 'Dredd',
-          userId: mockUserId,
+          userId: docketClerkUser.userId,
         },
         {
           docketEntryId: '7f61161c-ede8-43ba-8fab-69e15d057012',
-          docketNumber: '45678-18',
+          docketNumber: MOCK_CASE.docketNumber,
           documentTitle: 'Transcript of [anything] on [date]',
           documentType: 'Transcript',
           eventCode: TRANSCRIPT_EVENT_CODE,
-          userId: mockUserId,
+          userId: docketClerkUser.userId,
         },
       ],
     };
+
+    mockTrialSession = {
+      caseOrder: [
+        {
+          docketNumber: '101-20',
+        },
+      ],
+      createdAt: '2019-10-27T05:00:00.000Z',
+      gsi1pk: 'trial-session-catalog',
+      isCalendared: true,
+      judge: {
+        name: 'Judge Colvin',
+        userId: 'dabbad00-18d0-43ec-bafb-654e83405416',
+      },
+      maxCases: 100,
+      pk: 'trial-session|959c4338-0fac-42eb-b0eb-d53b8d0195cc',
+      proceedingType: TRIAL_SESSION_PROCEEDING_TYPES.inPerson,
+      sessionType: 'Regular',
+      sk: 'trial-session|959c4338-0fac-42eb-b0eb-d53b8d0195cc',
+      startDate: '2019-11-27T05:00:00.000Z',
+      startTime: '10:00',
+      swingSession: true,
+      swingSessionId: '208a959f-9526-4db5-b262-e58c476a4604',
+      term: 'Fall',
+      termYear: '2019',
+      trialLocation: 'Houston, Texas',
+      trialSessionId: '959c4338-0fac-42eb-b0eb-d53b8d0195cc',
+    };
+
+    applicationContext
+      .getPersistenceGateway()
+      .getTrialSessionById.mockReturnValue(mockTrialSession);
+
     applicationContext
       .getUseCaseHelpers()
       .countPagesInDocument.mockReturnValue(1);
+
     applicationContext
       .getPersistenceGateway()
       .getCaseByDocketNumber.mockImplementation(() => caseRecord);
@@ -176,17 +205,7 @@ describe('fileAndServeCourtIssuedDocumentInteractor', () => {
 
   it('should set the document as served and update the case and work items for a generic order document', async () => {
     await fileAndServeCourtIssuedDocumentInteractor(applicationContext, {
-      documentMeta: {
-        date: '2019-03-01T21:40:46.415Z',
-        docketEntryId: caseRecord.docketEntries[0].docketEntryId,
-        docketNumber: caseRecord.docketNumber,
-        documentTitle: 'Order',
-        documentType: 'Order',
-        eventCode: 'O',
-        freeText: 'Dogs',
-        generatedDocumentTitle: 'Transcript of Dogs on 03-01-19',
-        serviceStamp: 'Served',
-      },
+      documentMeta: caseRecord.docketEntries[0],
     });
 
     const updatedCase =
@@ -209,17 +228,7 @@ describe('fileAndServeCourtIssuedDocumentInteractor', () => {
 
   it('should set the number of pages present in the document to be served', async () => {
     await fileAndServeCourtIssuedDocumentInteractor(applicationContext, {
-      documentMeta: {
-        date: '2019-03-01T21:40:46.415Z',
-        docketEntryId: caseRecord.docketEntries[0].docketEntryId,
-        docketNumber: caseRecord.docketNumber,
-        documentTitle: 'Order',
-        documentType: 'Order',
-        eventCode: 'O',
-        freeText: 'Dogs',
-        generatedDocumentTitle: 'Transcript of Dogs on 03-01-19',
-        serviceStamp: 'Served',
-      },
+      documentMeta: caseRecord.docketEntries[0],
     });
 
     const updatedCase =
@@ -240,18 +249,8 @@ describe('fileAndServeCourtIssuedDocumentInteractor', () => {
   });
 
   it('should set the document as served and update the case and work items for a non-generic order document', async () => {
-    applicationContext
-      .getPersistenceGateway()
-      .saveDocumentFromLambda.mockImplementation(() => {});
-
     await fileAndServeCourtIssuedDocumentInteractor(applicationContext, {
-      documentMeta: {
-        docketEntryId: caseRecord.docketEntries[1].docketEntryId,
-        docketNumber: caseRecord.docketNumber,
-        documentTitle: 'Order to Show Cause',
-        documentType: 'Order to Show Cause',
-        eventCode: 'OSC',
-      },
+      documentMeta: caseRecord.docketEntries[1],
     });
 
     const updatedCase =
@@ -271,52 +270,13 @@ describe('fileAndServeCourtIssuedDocumentInteractor', () => {
     ).toHaveBeenCalled();
   });
 
-  it('should remove the case from the trial session if the case has a trialSessionId', async () => {
-    applicationContext
-      .getPersistenceGateway()
-      .getTrialSessionById.mockReturnValue({
-        caseOrder: [
-          {
-            docketNumber: '101-20',
-          },
-        ],
-        createdAt: '2019-10-27T05:00:00.000Z',
-        gsi1pk: 'trial-session-catalog',
-        isCalendared: false,
-        judge: {
-          name: 'Judge Colvin',
-          userId: 'dabbad00-18d0-43ec-bafb-654e83405416',
-        },
-        maxCases: 100,
-        pk: 'trial-session|959c4338-0fac-42eb-b0eb-d53b8d0195cc',
-        proceedingType: TRIAL_SESSION_PROCEEDING_TYPES.inPerson,
-        sessionType: 'Regular',
-        sk: 'trial-session|959c4338-0fac-42eb-b0eb-d53b8d0195cc',
-        startDate: '2019-11-27T05:00:00.000Z',
-        startTime: '10:00',
-        swingSession: true,
-        swingSessionId: '208a959f-9526-4db5-b262-e58c476a4604',
-        term: 'Fall',
-        termYear: '2019',
-        trialLocation: 'Houston, Texas',
-        trialSessionId: '959c4338-0fac-42eb-b0eb-d53b8d0195cc',
-      });
-
+  it('should delete the case from the trial session if the case has a trialSessionId and is not calendared and the order document has an event code that should close the case', async () => {
+    mockTrialSession.isCalendared = false;
     caseRecord.trialSessionId = 'c54ba5a9-b37b-479d-9201-067ec6e335bb';
     caseRecord.trialDate = '2019-03-01T21:40:46.415Z';
 
     await fileAndServeCourtIssuedDocumentInteractor(applicationContext, {
-      documentMeta: {
-        date: '2019-03-01T21:40:46.415Z',
-        docketEntryId: caseRecord.docketEntries[0].docketEntryId,
-        docketNumber: caseRecord.docketNumber,
-        documentTitle: 'Order',
-        documentType: 'Order',
-        eventCode: 'OD',
-        freeText: 'Dogs',
-        generatedDocumentTitle: 'Transcript of Dogs on 03-01-19',
-        serviceStamp: 'Served',
-      },
+      documentMeta: { ...caseRecord.docketEntries[0], eventCode: 'OD' },
     });
 
     expect(
@@ -327,19 +287,25 @@ describe('fileAndServeCourtIssuedDocumentInteractor', () => {
     ).toHaveBeenCalled();
   });
 
-  it('should call updateCaseAutomaticBlock and deleteCaseTrialSortMappingRecords', async () => {
+  it('should remove the case from the trial session if the case has a trialSessionId and isCalendared and the order document has an event code that should close the case', async () => {
+    caseRecord.trialSessionId = 'c54ba5a9-b37b-479d-9201-067ec6e335bb';
+    caseRecord.trialDate = '2019-03-01T21:40:46.415Z';
+
     await fileAndServeCourtIssuedDocumentInteractor(applicationContext, {
-      documentMeta: {
-        date: '2019-03-01T21:40:46.415Z',
-        docketEntryId: caseRecord.docketEntries[0].docketEntryId,
-        docketNumber: caseRecord.docketNumber,
-        documentTitle: 'Order',
-        documentType: 'Order',
-        eventCode: 'OD',
-        freeText: 'Dogs',
-        pending: true,
-        serviceStamp: 'Served',
-      },
+      documentMeta: { ...caseRecord.docketEntries[0], eventCode: 'OD' },
+    });
+
+    expect(
+      applicationContext.getUseCaseHelpers().serveDocumentAndGetPaperServicePdf,
+    ).toHaveBeenCalled();
+    expect(
+      applicationContext.getPersistenceGateway().updateTrialSession,
+    ).toHaveBeenCalled();
+  });
+
+  it('should call updateCaseAutomaticBlock and deleteCaseTrialSortMappingRecords if the order document has an event code that should close the case', async () => {
+    await fileAndServeCourtIssuedDocumentInteractor(applicationContext, {
+      documentMeta: { ...caseRecord.docketEntries[0], eventCode: 'OD' },
     });
 
     expect(
@@ -354,26 +320,11 @@ describe('fileAndServeCourtIssuedDocumentInteractor', () => {
   it('should call serveDocumentAndGetPaperServicePdf and return its result', async () => {
     caseRecord.petitioners[0].serviceIndicator =
       SERVICE_INDICATOR_TYPES.SI_PAPER;
-    applicationContext
-      .getUseCaseHelpers()
-      .serveDocumentAndGetPaperServicePdf.mockReturnValue({
-        pdfUrl: mockPdfUrl,
-      });
 
     const result = await fileAndServeCourtIssuedDocumentInteractor(
       applicationContext,
       {
-        documentMeta: {
-          date: '2019-03-01T21:40:46.415Z',
-          docketEntryId: caseRecord.docketEntries[0].docketEntryId,
-          docketNumber: caseRecord.docketNumber,
-          documentTitle: 'Order',
-          documentType: 'Order',
-          eventCode: 'OD',
-          freeText: 'Dogs',
-          pending: true,
-          serviceStamp: 'Served',
-        },
+        documentMeta: caseRecord.docketEntries[0],
       },
     );
 
@@ -382,14 +333,7 @@ describe('fileAndServeCourtIssuedDocumentInteractor', () => {
 
   it('should call updateCase with the docket entry set as pending if the document is a tracked document', async () => {
     await fileAndServeCourtIssuedDocumentInteractor(applicationContext, {
-      documentMeta: {
-        docketEntryId: caseRecord.docketEntries[1].docketEntryId,
-        docketNumber: caseRecord.docketNumber,
-        documentTitle: 'Order to Show Cause',
-        documentType: 'Order to Show Cause',
-        eventCode: 'OSC',
-        generatedDocumentTitle: 'Generated Order Document Title',
-      },
+      documentMeta: caseRecord.docketEntries[1],
     });
 
     expect(
@@ -408,26 +352,12 @@ describe('fileAndServeCourtIssuedDocumentInteractor', () => {
 
   it('should set isDraft to false on a document when creating a court issued docket entry', async () => {
     await fileAndServeCourtIssuedDocumentInteractor(applicationContext, {
-      documentMeta: {
-        date: '2019-03-01T21:40:46.415Z',
-        docketEntryId: '7f61161c-ede8-43ba-8fab-69e15d057012',
-        docketNumber: caseRecord.docketNumber,
-        documentTitle: 'Transcript of [anything] on [date]',
-        documentType: 'Transcript',
-        eventCode: TRANSCRIPT_EVENT_CODE,
-        freeText: 'Dogs',
-        generatedDocumentTitle: 'Transcript of Dogs on 03-01-19',
-        isDraft: true,
-      },
+      documentMeta: caseRecord.docketEntries[2],
     });
-
-    const lastDocumentIndex =
-      applicationContext.getPersistenceGateway().updateCase.mock.calls[0][0]
-        .caseToUpdate.docketEntries.length - 1;
 
     const newlyFiledDocument =
       applicationContext.getPersistenceGateway().updateCase.mock.calls[0][0]
-        .caseToUpdate.docketEntries[lastDocumentIndex];
+        .caseToUpdate.docketEntries[2];
 
     expect(newlyFiledDocument).toMatchObject({
       isDraft: false,
@@ -436,13 +366,7 @@ describe('fileAndServeCourtIssuedDocumentInteractor', () => {
 
   it('should update the work item and set as completed when a work item previously existed on the docket entry', async () => {
     await fileAndServeCourtIssuedDocumentInteractor(applicationContext, {
-      documentMeta: {
-        docketEntryId: mockDocketEntryWithWorkItem.docketEntryId,
-        docketNumber: caseRecord.docketNumber,
-        documentTitle: mockDocketEntryWithWorkItem.documentTitle,
-        documentType: mockDocketEntryWithWorkItem.documentType,
-        eventCode: mockDocketEntryWithWorkItem.eventCode,
-      },
+      documentMeta: mockDocketEntryWithWorkItem,
     });
 
     expect(
@@ -455,15 +379,11 @@ describe('fileAndServeCourtIssuedDocumentInteractor', () => {
   it('should delete the draftOrderState from the docketEntry', async () => {
     await fileAndServeCourtIssuedDocumentInteractor(applicationContext, {
       documentMeta: {
-        docketEntryId: mockDocketEntryWithWorkItem.docketEntryId,
-        docketNumber: caseRecord.docketNumber,
-        documentTitle: mockDocketEntryWithWorkItem.documentTitle,
-        documentType: 'Transcript',
+        ...mockDocketEntryWithWorkItem,
         draftOrderState: {
           documentContents: 'Some content',
           richText: 'some content',
         },
-        eventCode: 'TRAN',
       },
     });
 
@@ -480,13 +400,8 @@ describe('fileAndServeCourtIssuedDocumentInteractor', () => {
     it(`should set the case status to closed for event code: ${docketEntry.eventCode}`, async () => {
       await fileAndServeCourtIssuedDocumentInteractor(applicationContext, {
         documentMeta: {
-          date: '2019-03-01T21:40:46.415Z',
-          docketEntryId: caseRecord.docketEntries[0].docketEntryId,
-          docketNumber: caseRecord.docketNumber,
-          documentTitle: 'Order',
-          documentType: 'Order',
+          ...caseRecord.docketEntries[0],
           eventCode: docketEntry.eventCode,
-          serviceStamp: 'Served',
         },
       });
 
@@ -504,17 +419,7 @@ describe('fileAndServeCourtIssuedDocumentInteractor', () => {
 
   it('should use original case caption to create case title when creating work item', async () => {
     await fileAndServeCourtIssuedDocumentInteractor(applicationContext, {
-      documentMeta: {
-        date: '2019-03-01T21:40:46.415Z',
-        docketEntryId: 'c54ba5a9-b37b-479d-9201-067ec6e335bc',
-        docketNumber: caseRecord.docketNumber,
-        documentTitle: 'Order',
-        documentType: 'Order',
-        eventCode: 'O',
-        freeText: 'Dogs',
-        generatedDocumentTitle: 'Transcript of Dogs on 03-01-19',
-        serviceStamp: 'Served',
-      },
+      documentMeta: caseRecord.docketEntries[1],
     });
 
     expect(
@@ -540,15 +445,7 @@ describe('fileAndServeCourtIssuedDocumentInteractor', () => {
 
     await expect(
       fileAndServeCourtIssuedDocumentInteractor(applicationContext, {
-        documentMeta: {
-          date: '2019-03-01T21:40:46.415Z',
-          docketEntryId: caseRecord.docketEntries[0].docketEntryId,
-          docketNumber: caseRecord.docketNumber,
-          documentTitle: 'Order',
-          documentType: 'Order',
-          eventCode: 'O',
-          serviceStamp: 'Served',
-        },
+        documentMeta: caseRecord.docketEntries[0],
       }),
     ).rejects.toThrow("servedPartiesCode' is not allowed to be empty");
   });
@@ -559,10 +456,7 @@ describe('fileAndServeCourtIssuedDocumentInteractor', () => {
 
     await expect(
       fileAndServeCourtIssuedDocumentInteractor(applicationContext, {
-        documentMeta: {
-          docketEntryId: docketEntry.docketEntryId,
-          docketNumber: caseRecord.docketNumber,
-        },
+        documentMeta: docketEntry,
       }),
     ).rejects.toThrow('Docket entry is already being served');
 
@@ -576,9 +470,7 @@ describe('fileAndServeCourtIssuedDocumentInteractor', () => {
     docketEntry.isPendingService = false;
 
     await fileAndServeCourtIssuedDocumentInteractor(applicationContext, {
-      documentMeta: {
-        ...docketEntry,
-      },
+      documentMeta: docketEntry,
     });
 
     expect(
@@ -602,42 +494,17 @@ describe('fileAndServeCourtIssuedDocumentInteractor', () => {
     });
   });
 
-  it('should call the persistence method to unset the pending service status on the document if there is an error when serving', async () => {
-    const docketEntry = caseRecord.docketEntries[0];
-    docketEntry.isPendingService = false;
-
-    applicationContext
-      .getUseCaseHelpers()
-      .serveDocumentAndGetPaperServicePdf.mockRejectedValueOnce(
-        new Error('whoops, that is an error!'),
-      );
-
-    await expect(
-      fileAndServeCourtIssuedDocumentInteractor(applicationContext, {
-        documentMeta: {
-          ...docketEntry,
-        },
-      }),
-    ).rejects.toThrow('whoops, that is an error!');
-
-    expect(
-      applicationContext.getPersistenceGateway()
-        .updateDocketEntryPendingServiceStatus,
-    ).toHaveBeenCalledWith({
-      applicationContext,
-      docketEntryId: docketEntry.docketEntryId,
-      docketNumber: caseRecord.docketNumber,
-      status: true,
+  it('should include `Entered and Served` in the the serviceStampType when the eventCode is in ENTERED_AND_SERVED_EVENT_CODES', async () => {
+    await fileAndServeCourtIssuedDocumentInteractor(applicationContext, {
+      documentMeta: {
+        ...caseRecord.docketEntries[0],
+        documentType: 'Notice',
+        eventCode: 'ODJ',
+      },
     });
 
     expect(
-      applicationContext.getPersistenceGateway()
-        .updateDocketEntryPendingServiceStatus,
-    ).toHaveBeenCalledWith({
-      applicationContext,
-      docketEntryId: docketEntry.docketEntryId,
-      docketNumber: caseRecord.docketNumber,
-      status: false,
-    });
+      addServedStampToDocument.mock.calls[0][0].serviceStampText,
+    ).toContain('Entered and Served');
   });
 });

@@ -37,9 +37,7 @@ describe('formattedTrialSessionDetails', () => {
   it('formats trial session when all fields have values', () => {
     const result = formattedTrialSessionDetails({
       applicationContext,
-      trialSession: {
-        ...TRIAL_SESSION,
-      },
+      trialSession: TRIAL_SESSION,
     });
     expect(result).toMatchObject({
       formattedCityStateZip: 'Hartford, CT 12345',
@@ -57,9 +55,7 @@ describe('formattedTrialSessionDetails', () => {
   it('formats trial session when address fields are empty', () => {
     let result = formattedTrialSessionDetails({
       applicationContext,
-      trialSession: {
-        ...omit(TRIAL_SESSION, ['city', 'state', 'postalCode']),
-      },
+      trialSession: omit(TRIAL_SESSION, ['city', 'state', 'postalCode']),
     });
     expect(result).toMatchObject({
       formattedCityStateZip: '',
@@ -68,9 +64,7 @@ describe('formattedTrialSessionDetails', () => {
 
     result = formattedTrialSessionDetails({
       applicationContext,
-      trialSession: {
-        ...omit(TRIAL_SESSION, ['city']),
-      },
+      trialSession: omit(TRIAL_SESSION, ['city']),
     });
     expect(result).toMatchObject({
       formattedCityStateZip: 'CT 12345',
@@ -79,9 +73,7 @@ describe('formattedTrialSessionDetails', () => {
 
     result = formattedTrialSessionDetails({
       applicationContext,
-      trialSession: {
-        ...omit(TRIAL_SESSION, ['state']),
-      },
+      trialSession: omit(TRIAL_SESSION, ['state']),
     });
     expect(result).toMatchObject({
       formattedCityStateZip: 'Hartford, 12345',
@@ -90,10 +82,7 @@ describe('formattedTrialSessionDetails', () => {
 
     result = formattedTrialSessionDetails({
       applicationContext,
-
-      trialSession: {
-        ...omit(TRIAL_SESSION, ['state']),
-      },
+      trialSession: omit(TRIAL_SESSION, ['state']),
     });
     expect(result).toMatchObject({
       formattedCityStateZip: 'Hartford, 12345',
@@ -102,9 +91,7 @@ describe('formattedTrialSessionDetails', () => {
 
     result = formattedTrialSessionDetails({
       applicationContext,
-      trialSession: {
-        ...omit(TRIAL_SESSION, ['postalCode']),
-      },
+      trialSession: omit(TRIAL_SESSION, ['postalCode']),
     });
     expect(result).toMatchObject({
       formattedCityStateZip: 'Hartford, CT',
@@ -113,16 +100,14 @@ describe('formattedTrialSessionDetails', () => {
   });
 
   it('formats trial session when session assignments are empty', () => {
-    let result = formattedTrialSessionDetails({
+    const result = formattedTrialSessionDetails({
       applicationContext,
-      trialSession: {
-        ...omit(TRIAL_SESSION, [
-          'courtReporter',
-          'irsCalendarAdministrator',
-          'judge',
-          'trialClerk',
-        ]),
-      },
+      trialSession: omit(TRIAL_SESSION, [
+        'courtReporter',
+        'irsCalendarAdministrator',
+        'judge',
+        'trialClerk',
+      ]),
     });
     expect(result).toMatchObject({
       formattedCourtReporter: 'Not assigned',
@@ -132,21 +117,49 @@ describe('formattedTrialSessionDetails', () => {
     });
   });
 
-  it('formats trial session start time', () => {
-    let result = formattedTrialSessionDetails({
-      applicationContext,
-      trialSession: {
-        ...TRIAL_SESSION,
-        startTime: '14:00',
-      },
+  describe('formats trial session start times', () => {
+    it('formats trial session start time', () => {
+      const result = formattedTrialSessionDetails({
+        applicationContext,
+        trialSession: {
+          ...TRIAL_SESSION,
+          startTime: '14:00',
+        },
+      });
+      expect(result).toMatchObject({
+        formattedStartTime: '2:00 pm',
+      });
     });
-    expect(result).toMatchObject({
-      formattedStartTime: '2:00 pm',
+
+    it('formats trial session start time in the morning', () => {
+      const result = formattedTrialSessionDetails({
+        applicationContext,
+        trialSession: {
+          ...TRIAL_SESSION,
+          startTime: '10:00',
+        },
+      });
+      expect(result).toMatchObject({
+        formattedStartTime: '10:00 am',
+      });
+    });
+
+    it('formats trial session start time at noon', () => {
+      const result = formattedTrialSessionDetails({
+        applicationContext,
+        trialSession: {
+          ...TRIAL_SESSION,
+          startTime: '12:00',
+        },
+      });
+      expect(result).toMatchObject({
+        formattedStartTime: '12:00 pm',
+      });
     });
   });
 
   it('displays swing session area if session is a swing session', () => {
-    let result = formattedTrialSessionDetails({
+    const result = formattedTrialSessionDetails({
       applicationContext,
       trialSession: {
         ...TRIAL_SESSION,
@@ -186,6 +199,7 @@ describe('formattedTrialSessionDetails', () => {
       }).isDocketSuffixHighPriority,
     ).toBe(true);
   });
+
   describe('comparing eligible cases', () => {
     it('prioritizes L and P', () => {
       const result = compareTrialSessionEligibleCases(
@@ -269,36 +283,35 @@ describe('formattedTrialSessionDetails', () => {
       const result = formattedEligibleCases.sort(
         compareTrialSessionEligibleCases,
       );
-      expect(result[0]).toMatchObject({
-        docketNumber: '103-19',
-        docketNumberSuffix: 'P',
-        docketNumberWithSuffix: '103-19P',
-        isManuallyAdded: true,
-      });
-      expect(result[1]).toMatchObject({
-        // should be 2nd
-        docketNumber: '104-19',
-        docketNumberSuffix: '',
-        docketNumberWithSuffix: '104-19',
-        highPriority: true,
-      });
-      expect(result[2]).toMatchObject({
-        // should be 3rd
-        docketNumber: '101-19',
-        docketNumberSuffix: 'L',
-        docketNumberWithSuffix: '101-19L',
-      });
-      expect(result[3]).toMatchObject({
-        // should be last
-        docketNumber: '105-19',
-        docketNumberSuffix: '',
-        docketNumberWithSuffix: '105-19',
-      });
+      expect(result).toMatchObject([
+        {
+          docketNumber: '103-19',
+          docketNumberSuffix: 'P',
+          docketNumberWithSuffix: '103-19P',
+          isManuallyAdded: true,
+        },
+        {
+          docketNumber: '104-19',
+          docketNumberSuffix: '',
+          docketNumberWithSuffix: '104-19',
+          highPriority: true,
+        },
+        {
+          docketNumber: '101-19',
+          docketNumberSuffix: 'L',
+          docketNumberWithSuffix: '101-19L',
+        },
+        {
+          docketNumber: '105-19',
+          docketNumberSuffix: '',
+          docketNumberWithSuffix: '105-19',
+        },
+      ]);
     });
   });
 
   it('formats docket numbers with suffixes and case caption names without postfix on eligible cases', () => {
-    let result = formattedTrialSessionDetails({
+    const result = formattedTrialSessionDetails({
       applicationContext,
       trialSession: {
         ...TRIAL_SESSION,
@@ -308,11 +321,13 @@ describe('formattedTrialSessionDetails', () => {
             ...MOCK_CASE,
             caseCaption: 'Daenerys Stormborn & Someone Else, Petitioners',
             docketNumberSuffix: DOCKET_NUMBER_SUFFIXES.WHISTLEBLOWER,
+            docketNumberWithSuffix: '101-18W',
           },
           {
             ...MOCK_CASE,
             caseCaption: undefined,
             docketNumber: '103-19',
+            docketNumberWithSuffix: '103-19',
           },
           {
             ...MOCK_CASE,
@@ -333,39 +348,38 @@ describe('formattedTrialSessionDetails', () => {
     });
     expect(result.formattedEligibleCases.length).toEqual(5);
 
-    expect(result.formattedEligibleCases[0]).toMatchObject({
-      caseCaption: 'Marky Mark and The Funky Bunch, Petitioners',
-      docketNumber: '799-19',
-      docketNumberSuffix: DOCKET_NUMBER_SUFFIXES.LIEN_LEVY,
-      docketNumberWithSuffix: '799-19L',
-      isDocketSuffixHighPriority: true,
-    });
-
-    expect(result.formattedEligibleCases[1]).toMatchObject({
-      caseCaption: 'Bob Dylan and the Traveling Wilburys, Petitioners',
-      docketNumber: '122-20',
-      docketNumberSuffix: DOCKET_NUMBER_SUFFIXES.PASSPORT,
-      docketNumberWithSuffix: '122-20P',
-      isDocketSuffixHighPriority: true,
-    });
-
-    expect(result.formattedEligibleCases[2]).toMatchObject({
-      caseTitle: 'Test Petitioner',
-      docketNumberWithSuffix: '101-18',
-    });
-    expect(result.formattedEligibleCases[3]).toMatchObject({
-      caseTitle: 'Daenerys Stormborn & Someone Else',
-      docketNumberWithSuffix: '101-18W',
-    });
-
-    expect(result.formattedEligibleCases[4]).toMatchObject({
-      caseTitle: '',
-      docketNumberWithSuffix: '103-19',
-    });
+    expect(result.formattedEligibleCases).toMatchObject([
+      {
+        caseCaption: 'Marky Mark and The Funky Bunch, Petitioners',
+        docketNumber: '799-19',
+        docketNumberSuffix: DOCKET_NUMBER_SUFFIXES.LIEN_LEVY,
+        docketNumberWithSuffix: '799-19L',
+        isDocketSuffixHighPriority: true,
+      },
+      {
+        caseCaption: 'Bob Dylan and the Traveling Wilburys, Petitioners',
+        docketNumber: '122-20',
+        docketNumberSuffix: DOCKET_NUMBER_SUFFIXES.PASSPORT,
+        docketNumberWithSuffix: '122-20P',
+        isDocketSuffixHighPriority: true,
+      },
+      {
+        caseTitle: 'Test Petitioner',
+        docketNumberWithSuffix: '101-18',
+      },
+      {
+        caseTitle: 'Daenerys Stormborn & Someone Else',
+        docketNumberWithSuffix: '101-18W',
+      },
+      {
+        caseTitle: '',
+        docketNumberWithSuffix: '103-19',
+      },
+    ]);
   });
 
   it('formats docket numbers with suffixes and case caption names without postfix on calendared cases and splits them by open and closed cases', () => {
-    let result = formattedTrialSessionDetails({
+    const result = formattedTrialSessionDetails({
       applicationContext,
       trialSession: {
         ...TRIAL_SESSION,
@@ -376,6 +390,7 @@ describe('formattedTrialSessionDetails', () => {
             caseCaption: 'Daenerys Stormborn & Someone Else, Petitioners',
             docketNumber: '102-17',
             docketNumberSuffix: DOCKET_NUMBER_SUFFIXES.WHISTLEBLOWER,
+            docketNumberWithSuffix: '102-17W',
           },
           {
             ...MOCK_CASE,
@@ -383,6 +398,7 @@ describe('formattedTrialSessionDetails', () => {
             disposition: 'omg',
             docketNumber: '101-16',
             docketNumberSuffix: DOCKET_NUMBER_SUFFIXES.SMALL,
+            docketNumberWithSuffix: '101-16S',
             removedFromTrial: true,
             removedFromTrialDate: '2019-03-01T21:40:46.415Z',
           },
@@ -407,7 +423,7 @@ describe('formattedTrialSessionDetails', () => {
   });
 
   it('sorts calendared cases by docket number', () => {
-    let result = formattedTrialSessionDetails({
+    const result = formattedTrialSessionDetails({
       applicationContext,
       trialSession: {
         ...TRIAL_SESSION,
@@ -430,7 +446,7 @@ describe('formattedTrialSessionDetails', () => {
   });
 
   it('sets computedStatus to New if the session is not calendared', () => {
-    let result = formattedTrialSessionDetails({
+    const result = formattedTrialSessionDetails({
       applicationContext,
       trialSession: {
         ...TRIAL_SESSION,
@@ -441,7 +457,7 @@ describe('formattedTrialSessionDetails', () => {
   });
 
   it('sets computedStatus to Open if the session is calendared and calendaredCases contains open cases', () => {
-    let result = formattedTrialSessionDetails({
+    const result = formattedTrialSessionDetails({
       applicationContext,
       trialSession: {
         ...TRIAL_SESSION,
@@ -457,7 +473,7 @@ describe('formattedTrialSessionDetails', () => {
   });
 
   it('sets computedStatus to Closed if the session is calendared and caseOrder contains only cases with removedFromTrial = true', () => {
-    let result = formattedTrialSessionDetails({
+    const result = formattedTrialSessionDetails({
       applicationContext,
       trialSession: {
         ...TRIAL_SESSION,

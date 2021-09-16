@@ -1,4 +1,4 @@
-import { chooseByTruthyStateActionFactory } from '../actions/editUploadCourtIssuedDocument/chooseByTruthyStateActionFactory';
+import { chooseByTruthyStateActionFactory } from '../actions/EditUploadCourtIssuedDocument/chooseByTruthyStateActionFactory';
 import { clearAlertsAction } from '../actions/clearAlertsAction';
 import { followRedirectAction } from '../actions/followRedirectAction';
 import { getEditCorrespondenceDocumentAlertSuccessAction } from '../actions/CorrespondenceDocument/getEditCorrespondenceDocumentAlertSuccessAction';
@@ -15,11 +15,11 @@ import { setPrimaryCorrespondenceFileIdPropAction } from '../actions/Corresponde
 import { setSaveAlertsForNavigationAction } from '../actions/setSaveAlertsForNavigationAction';
 import { setValidationAlertErrorsAction } from '../actions/setValidationAlertErrorsAction';
 import { setValidationErrorsAction } from '../actions/setValidationErrorsAction';
-import { showProgressSequenceDecorator } from '../utilities/sequenceHelpers';
+import { showProgressSequenceDecorator } from '../utilities/showProgressSequenceDecorator';
 import { startShowValidationAction } from '../actions/startShowValidationAction';
 import { stopShowValidationAction } from '../actions/stopShowValidationAction';
 import { submitCorrespondenceAction } from '../actions/CorrespondenceDocument/submitCorrespondenceAction';
-import { unsetDocumentToEditAction } from '../actions/editUploadCourtIssuedDocument/unsetDocumentToEditAction';
+import { unsetDocumentToEditAction } from '../actions/EditUploadCourtIssuedDocument/unsetDocumentToEditAction';
 import { validateUploadCorrespondenceDocumentAction } from '../actions/CorrespondenceDocument/validateUploadCorrespondenceDocumentAction';
 
 const onError = [openFileUploadErrorModal];

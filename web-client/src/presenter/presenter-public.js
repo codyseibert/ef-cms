@@ -6,31 +6,35 @@ import { advancedSearchTabChangeSequence } from './sequences/advancedSearchTabCh
 import { cerebralBindSimpleSetStateSequence } from './sequences/cerebralBindSimpleSetStateSequence';
 import { clearAdvancedSearchFormSequence } from './sequences/clearAdvancedSearchFormSequence';
 import { clearPdfPreviewUrlSequence } from './sequences/clearPdfPreviewUrlSequence';
+import { closeModalAndNavigateToMaintenanceSequence } from './sequences/closeModalAndNavigateToMaintenanceSequence';
 import { dismissModalSequence } from './sequences/dismissModalSequence';
 import { gotoContactSequence } from './sequences/gotoContactSequence';
 import { gotoHealthCheckSequence } from './sequences/gotoHealthCheckSequence';
+import { gotoMaintenanceSequence } from './sequences/gotoMaintenanceSequence';
 import { gotoPrivacySequence } from './sequences/gotoPrivacySequence';
-import { gotoPublicCaseDetailSequence } from './sequences/public/gotoPublicCaseDetailSequence';
+import { gotoPublicCaseDetailSequence } from './sequences/Public/gotoPublicCaseDetailSequence';
 import { gotoPublicEmailVerificationInstructionsSequence } from './sequences/gotoPublicEmailVerificationInstructionsSequence';
 import { gotoPublicEmailVerificationSuccessSequence } from './sequences/gotoPublicEmailVerificationSuccessSequence';
-import { gotoPublicPrintableDocketRecordSequence } from './sequences/public/gotoPublicPrintableDocketRecordSequence';
-import { gotoPublicSearchSequence } from './sequences/public/gotoPublicSearchSequence';
-import { gotoTodaysOpinionsSequence } from './sequences/public/gotoTodaysOpinionsSequence';
-import { gotoTodaysOrdersSequence } from './sequences/public/gotoTodaysOrdersSequence';
+import { gotoPublicPrintableDocketRecordSequence } from './sequences/Public/gotoPublicPrintableDocketRecordSequence';
+import { gotoPublicSearchSequence } from './sequences/Public/gotoPublicSearchSequence';
+import { gotoTodaysOpinionsSequence } from './sequences/Public/gotoTodaysOpinionsSequence';
+import { gotoTodaysOrdersSequence } from './sequences/Public/gotoTodaysOrdersSequence';
 import { loadMoreTodaysOrdersSequence } from './sequences/loadMoreTodaysOrdersSequence';
 import { navigateBackSequence } from './sequences/navigateBackSequence';
 import { navigateToCognitoSequence } from './sequences/navigateToCognitoSequence';
-import { navigateToPublicSiteSequence } from './sequences/public/navigateToPublicSiteSequence';
+import { navigateToPublicSiteSequence } from './sequences/Public/navigateToPublicSiteSequence';
 import { notFoundErrorSequence } from './sequences/notFoundErrorSequence';
+import { openAppMaintenanceModalSequence } from './sequences/openAppMaintenanceModalSequence';
 import { openCaseDocumentDownloadUrlSequence } from './sequences/openCaseDocumentDownloadUrlSequence';
 import { setCurrentPageErrorSequence } from './sequences/setCurrentPageErrorSequence';
+import { showMaintenancePageDecorator } from './utilities/showMaintenancePageDecorator';
 import { showMoreResultsSequence } from './sequences/showMoreResultsSequence';
-import { sortTodaysOrdersSequence } from './sequences/public/sortTodaysOrdersSequence';
+import { sortTodaysOrdersSequence } from './sequences/Public/sortTodaysOrdersSequence';
 import { state } from './state-public';
-import { submitPublicCaseAdvancedSearchSequence } from './sequences/public/submitPublicCaseAdvancedSearchSequence';
-import { submitPublicCaseDocketNumberSearchSequence } from './sequences/public/submitPublicCaseDocketNumberSearchSequence';
-import { submitPublicOpinionAdvancedSearchSequence } from './sequences/public/submitPublicOpinionAdvancedSearchSequence';
-import { submitPublicOrderAdvancedSearchSequence } from './sequences/public/submitPublicOrderAdvancedSearchSequence';
+import { submitPublicCaseAdvancedSearchSequence } from './sequences/Public/submitPublicCaseAdvancedSearchSequence';
+import { submitPublicCaseDocketNumberSearchSequence } from './sequences/Public/submitPublicCaseDocketNumberSearchSequence';
+import { submitPublicOpinionAdvancedSearchSequence } from './sequences/Public/submitPublicOpinionAdvancedSearchSequence';
+import { submitPublicOrderAdvancedSearchSequence } from './sequences/Public/submitPublicOrderAdvancedSearchSequence';
 import { toggleBetaBarSequence } from './sequences/toggleBetaBarSequence';
 import { toggleUsaBannerDetailsSequence } from './sequences/toggleUsaBannerDetailsSequence';
 import { updateAdvancedOpinionSearchFormValueSequence } from './sequences/updateAdvancedOpinionSearchFormValueSequence';
@@ -56,22 +60,42 @@ export const presenter = {
     cerebralBindSimpleSetStateSequence,
     clearAdvancedSearchFormSequence,
     clearPdfPreviewUrlSequence,
+    closeModalAndNavigateToMaintenanceSequence,
     dismissModalSequence,
-    gotoContactSequence,
-    gotoHealthCheckSequence,
-    gotoPrivacySequence,
-    gotoPublicCaseDetailSequence,
-    gotoPublicEmailVerificationInstructionsSequence,
-    gotoPublicEmailVerificationSuccessSequence,
-    gotoPublicPrintableDocketRecordSequence,
-    gotoPublicSearchSequence,
-    gotoTodaysOpinionsSequence,
-    gotoTodaysOrdersSequence,
+    gotoContactSequence: showMaintenancePageDecorator(gotoContactSequence),
+    gotoHealthCheckSequence: showMaintenancePageDecorator(
+      gotoHealthCheckSequence,
+    ),
+    gotoMaintenanceSequence,
+    gotoPrivacySequence: showMaintenancePageDecorator(gotoPrivacySequence),
+    gotoPublicCaseDetailSequence: showMaintenancePageDecorator(
+      gotoPublicCaseDetailSequence,
+    ),
+    gotoPublicEmailVerificationInstructionsSequence:
+      showMaintenancePageDecorator(
+        gotoPublicEmailVerificationInstructionsSequence,
+      ),
+    gotoPublicEmailVerificationSuccessSequence: showMaintenancePageDecorator(
+      gotoPublicEmailVerificationSuccessSequence,
+    ),
+    gotoPublicPrintableDocketRecordSequence: showMaintenancePageDecorator(
+      gotoPublicPrintableDocketRecordSequence,
+    ),
+    gotoPublicSearchSequence: showMaintenancePageDecorator(
+      gotoPublicSearchSequence,
+    ),
+    gotoTodaysOpinionsSequence: showMaintenancePageDecorator(
+      gotoTodaysOpinionsSequence,
+    ),
+    gotoTodaysOrdersSequence: showMaintenancePageDecorator(
+      gotoTodaysOrdersSequence,
+    ),
     loadMoreTodaysOrdersSequence,
     navigateBackSequence,
     navigateToCognitoSequence,
     navigateToPublicSiteSequence,
     notFoundErrorSequence,
+    openAppMaintenanceModalSequence,
     openCaseDocumentDownloadUrlSequence,
     showMoreResultsSequence,
     sortTodaysOrdersSequence,

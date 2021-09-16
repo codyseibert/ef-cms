@@ -5,7 +5,7 @@ import { closeFileUploadStatusModalAction } from '../actions/closeFileUploadStat
 import { createCaseFromPaperAction } from '../actions/createCaseFromPaperAction';
 import { filterEmptyStatisticsAction } from '../actions/StartCaseInternal/filterEmptyStatisticsAction';
 import { getPetitionIdAction } from '../actions/getPetitionIdAction';
-import { navigateToReviewSavedPetitionAction } from '../actions/caseDetailEdit/navigateToReviewSavedPetitionAction';
+import { navigateToReviewSavedPetitionAction } from '../actions/CaseDetailEdit/navigateToReviewSavedPetitionAction';
 import { openFileUploadErrorModal } from '../actions/openFileUploadErrorModal';
 import { setAlertErrorAction } from '../actions/setAlertErrorAction';
 import { setCaseAction } from '../actions/setCaseAction';
@@ -15,7 +15,7 @@ import { setPaperPetitionDatesSequence } from './setPaperPetitionDatesSequence';
 import { setShowModalFactoryAction } from '../actions/setShowModalFactoryAction';
 import { setValidationAlertErrorsAction } from '../actions/setValidationAlertErrorsAction';
 import { setValidationErrorsAction } from '../actions/setValidationErrorsAction';
-import { showProgressSequenceDecorator } from '../utilities/sequenceHelpers';
+import { showProgressSequenceDecorator } from '../utilities/showProgressSequenceDecorator';
 import { startShowValidationAction } from '../actions/startShowValidationAction';
 import { stopShowValidationAction } from '../actions/stopShowValidationAction';
 import { validatePetitionFromPaperAction } from '../actions/validatePetitionFromPaperAction';

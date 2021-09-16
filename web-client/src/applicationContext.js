@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import ImageBlobReduce from 'image-blob-reduce';
 const reduce = ImageBlobReduce({
   pica: ImageBlobReduce.pica({ features: ['js'] }),
@@ -6,6 +7,7 @@ import { BroadcastChannel } from 'broadcast-channel';
 import {
   Case,
   caseHasServedDocketEntries,
+  caseHasServedPetition,
   getContactPrimary,
   getContactSecondary,
   getOtherFilers,
@@ -46,6 +48,7 @@ import { getCompletedMessagesForUserInteractor } from '../../shared/src/proxies/
 import { getCropBox } from '../../shared/src/business/utilities/getCropBox';
 import { getDocumentTitleWithAdditionalInfo } from '../../shared/src/business/utilities/getDocumentTitleWithAdditionalInfo';
 import { getIsFeatureEnabled } from '../../shared/src/business/utilities/getIsFeatureEnabled';
+import { getMaintenanceModeInteractor } from '../../shared/src/proxies/maintenance/getMaintenanceModeProxy';
 import { getStampBoxCoordinates } from '../../shared/src/business/utilities/getStampBoxCoordinates';
 import { getUserPendingEmailStatusInteractor } from '../../shared/src/proxies/users/getUserPendingEmailStatusProxy';
 import { setupPdfDocument } from '../../shared/src/business/utilities/setupPdfDocument';
@@ -139,6 +142,7 @@ import {
   getFormattedCaseDetail,
   sortDocketEntries,
 } from '../../shared/src/business/utilities/getFormattedCaseDetail';
+import { formatPhoneNumber } from '../../shared/src/business/utilities/formatPhoneNumber';
 import { forwardMessageInteractor } from '../../shared/src/proxies/messages/forwardMessageProxy';
 import { generateCaseAssociationDocumentTitleInteractor } from '../../shared/src/business/useCases/caseAssociationRequest/generateCaseAssociationDocumentTitleInteractor';
 import { generateCourtIssuedDocumentTitleInteractor } from '../../shared/src/business/useCases/courtIssuedDocument/generateCourtIssuedDocumentTitleInteractor';
@@ -179,6 +183,7 @@ import { getMessageThreadInteractor } from '../../shared/src/proxies/messages/ge
 import { getMessagesForCaseInteractor } from '../../shared/src/proxies/messages/getMessagesForCaseProxy';
 import { getNotificationsInteractor } from '../../shared/src/proxies/users/getNotificationsProxy';
 import { getOpenConsolidatedCasesInteractor } from '../../shared/src/proxies/getOpenConsolidatedCasesProxy';
+import { getOrderSearchEnabledInteractor } from '../../shared/src/proxies/search/getOrderSearchEnabledProxy';
 import { getOutboxMessagesForSectionInteractor } from '../../shared/src/proxies/messages/getOutboxMessagesForSectionProxy';
 import { getOutboxMessagesForUserInteractor } from '../../shared/src/proxies/messages/getOutboxMessagesForUserProxy';
 import { getPdfFromUrl } from '../../shared/src/persistence/s3/getPdfFromUrl';
@@ -405,10 +410,12 @@ const allUseCases = {
   getIrsPractitionersBySearchKeyInteractor,
   getItemInteractor,
   getJudgeForUserChambersInteractor,
+  getMaintenanceModeInteractor,
   getMessageThreadInteractor,
   getMessagesForCaseInteractor,
   getNotificationsInteractor,
   getOpenConsolidatedCasesInteractor,
+  getOrderSearchEnabledInteractor,
   getOutboxMessagesForSectionInteractor,
   getOutboxMessagesForUserInteractor,
   getPdfFromUrlInteractor,
@@ -645,6 +652,7 @@ const applicationContext = {
       aggregatePartiesForService,
       calculateISODate,
       caseHasServedDocketEntries,
+      caseHasServedPetition,
       checkDate,
       compareCasesByDocketNumber,
       compareISODateStrings,
@@ -665,6 +673,7 @@ const applicationContext = {
       formatDollars,
       formatJudgeName,
       formatNow,
+      formatPhoneNumber,
       formattedTrialSessionDetails,
       getAttachmentDocumentById: Case.getAttachmentDocumentById,
       getCaseCaption: Case.getCaseCaption,

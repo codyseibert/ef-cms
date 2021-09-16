@@ -2,11 +2,10 @@ import { CONTACT_TYPES } from '../../shared/src/business/entities/EntityConstant
 import {
   contactPrimaryFromState,
   contactSecondaryFromState,
-  fakeFile,
   loginAs,
   setupTest,
+  uploadPetition,
 } from './helpers';
-import { petitionerCreatesNewCase } from './journey/petitionerCreatesNewCase';
 import { petitionerViewsCaseDetail } from './journey/petitionerViewsCaseDetail';
 import { petitionsClerkSubmitsCaseToIrs } from './journey/petitionsClerkSubmitsCaseToIrs';
 import { some } from 'lodash';
@@ -199,7 +198,13 @@ describe('Case permissions test', () => {
   });
 
   loginAs(cerebralTest, 'petitioner@example.com');
-  petitionerCreatesNewCase(cerebralTest, fakeFile);
+  it('login as a petitioner and create a case', async () => {
+    const caseDetail = await uploadPetition(cerebralTest, {
+      caseType: 'Whistleblower',
+    });
+    expect(caseDetail.docketNumber).toBeDefined();
+    cerebralTest.docketNumber = caseDetail.docketNumber;
+  });
   petitionerViewsCaseDetail(cerebralTest);
   it('Petitioner views case detail', async () => {
     cerebralTest.setState('caseDetail', {});
@@ -339,5 +344,26 @@ describe('Case permissions test', () => {
     internalFieldsBlocked();
     stinVisible();
     await printableDocketRecordVisible();
+  });
+
+  loginAs(cerebralTest, 'floater@example.com');
+  it('allows access to the floater user to view the case detail', async () => {
+    await cerebralTest.runSequence('gotoCaseDetailSequence', {
+      docketNumber: cerebralTest.docketNumber,
+    });
+  });
+
+  loginAs(cerebralTest, 'general@example.com');
+  it('allows access to the general user to view the case detail', async () => {
+    await cerebralTest.runSequence('gotoCaseDetailSequence', {
+      docketNumber: cerebralTest.docketNumber,
+    });
+  });
+
+  loginAs(cerebralTest, 'reportersOffice@example.com');
+  it('allows access to the reportersOffice user to view the case detail', async () => {
+    await cerebralTest.runSequence('gotoCaseDetailSequence', {
+      docketNumber: cerebralTest.docketNumber,
+    });
   });
 });

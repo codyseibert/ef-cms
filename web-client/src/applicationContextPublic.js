@@ -2,6 +2,7 @@ import {
   CASE_CAPTION_POSTFIX,
   CASE_SEARCH_PAGE_SIZE,
   COUNTRY_TYPES,
+  DATE_RANGE_SEARCH_OPTIONS,
   DOCKET_NUMBER_SUFFIXES,
   DOCUMENT_PROCESSING_STATUS_OPTIONS,
   EVENT_CODES_VISIBLE_TO_PUBLIC,
@@ -23,6 +24,7 @@ import {
   getContactPrimary,
   getContactSecondary,
 } from '../../shared/src/business/entities/cases/Case';
+import { User } from '../../shared/src/business/entities/User';
 import { casePublicSearchInteractor } from '../../shared/src/proxies/casePublicSearchProxy';
 import { compareCasesByDocketNumber } from '../../shared/src/business/utilities/getFormattedTrialSessionDetails';
 import {
@@ -42,6 +44,7 @@ import {
 import { getDocumentDownloadUrlInteractor } from '../../shared/src/proxies/getDocumentDownloadUrlProxy';
 import { getHealthCheckInteractor } from '../../shared/src/proxies/health/getHealthCheckProxy';
 import { getJudgeLastName } from '../../shared/src/business/utilities/getFormattedJudgeName';
+import { getMaintenanceModePublicInteractor } from '../../shared/src/proxies/maintenance/getMaintenanceModePublicProxy';
 import { getPublicCaseInteractor } from '../../shared/src/proxies/getPublicCaseProxy';
 import { getPublicJudgesInteractor } from '../../shared/src/proxies/public/getPublicJudgesProxy';
 import { getTodaysOpinionsInteractor } from '../../shared/src/proxies/public/getTodaysOpinionsProxy';
@@ -54,7 +57,6 @@ import { validateOpinionAdvancedSearchInteractor } from '../../shared/src/busine
 import { validateOrderAdvancedSearchInteractor } from '../../shared/src/business/useCases/validateOrderAdvancedSearchInteractor';
 import axios from 'axios';
 import deepFreeze from 'deep-freeze';
-
 const ADVANCED_SEARCH_TABS = {
   CASE: 'case',
   OPINION: 'opinion',
@@ -68,6 +70,7 @@ const allUseCases = {
   getCaseInteractor: getPublicCaseInteractor,
   getDocumentDownloadUrlInteractor,
   getHealthCheckInteractor,
+  getMaintenanceModePublicInteractor,
   getPublicJudgesInteractor,
   getTodaysOpinionsInteractor,
   getTodaysOrdersInteractor,
@@ -84,6 +87,7 @@ const frozenConstants = deepFreeze({
   CASE_CAPTION_POSTFIX,
   CASE_SEARCH_PAGE_SIZE,
   COUNTRY_TYPES,
+  DATE_RANGE_SEARCH_OPTIONS,
   DOCKET_NUMBER_SUFFIXES,
   DOCUMENT_PROCESSING_STATUS_OPTIONS,
   EVENT_CODES_VISIBLE_TO_PUBLIC,
@@ -143,6 +147,8 @@ const applicationContextPublic = {
       getContactPrimary,
       getContactSecondary,
       getJudgeLastName,
+      isExternalUser: User.isExternalUser,
+      isInternalUser: User.isInternalUser,
       sortDocketEntries,
     };
   },

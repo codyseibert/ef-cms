@@ -3,9 +3,6 @@ const {
   MAX_SEARCH_CLIENT_RESULTS,
   ORDER_JUDGE_FIELD,
 } = require('../../business/entities/EntityConstants');
-const {
-  removeAdvancedSyntaxSymbols,
-} = require('../../business/utilities/aggregateCommonQueryParams');
 const { search } = require('./searchClient');
 
 exports.advancedDocumentSearch = async ({
@@ -19,7 +16,7 @@ exports.advancedDocumentSearch = async ({
   judgeType,
   keyword,
   omitSealed,
-  opinionType,
+  opinionTypes,
   overrideResultSize,
   sortOrder: sortField,
   startDate,
@@ -44,22 +41,27 @@ exports.advancedDocumentSearch = async ({
     'signedJudgeName',
   ];
 
-  const docketEntryQueryParams = [
+  const documentQueryFilter = [
+    { term: { 'entityName.S': 'DocketEntry' } },
     {
-      bool: {
-        must: [{ terms: { 'eventCode.S': documentEventCodes } }],
-        must_not: [{ term: { 'isStricken.BOOL': true } }],
+      exists: {
+        field: 'servedAt',
       },
     },
+    { terms: { 'eventCode.S': documentEventCodes } },
   ];
+
+  const docketEntryQueryParams = [];
   const caseMustNot = [];
+  const simpleQueryFlags = 'OR|AND|ESCAPE|PHRASE'; // OR|AND|NOT|PHRASE|ESCAPE|PRECEDENCE', // https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-simple-query-string-query.html#supported-flags
 
   if (keyword) {
     docketEntryQueryParams.push({
       simple_query_string: {
         default_operator: 'and',
         fields: ['documentContents.S', 'documentTitle.S'],
-        query: removeAdvancedSyntaxSymbols(keyword),
+        flags: simpleQueryFlags,
+        query: keyword,
       },
     });
   }
@@ -77,22 +79,22 @@ exports.advancedDocumentSearch = async ({
         name: 'case-mappings',
       },
       parent_type: 'case',
-      query: { bool: { must_not: caseMustNot } },
+      query: { bool: { filter: [], must_not: caseMustNot } },
       score: true,
     },
   };
 
   if (docketNumber) {
-    caseQueryParams.has_parent.query.bool.must = {
+    caseQueryParams.has_parent.query.bool.filter.push({
       term: { 'docketNumber.S': docketNumber },
-    };
+    });
   } else if (caseTitleOrPetitioner) {
     caseQueryParams.has_parent.query.bool.must = {
       simple_query_string: {
         default_operator: 'and',
-
         fields: ['caseCaption.S', 'petitioners.L.M.name.S'],
-        query: removeAdvancedSyntaxSymbols(caseTitleOrPetitioner),
+        flags: simpleQueryFlags,
+        query: caseTitleOrPetitioner,
       },
     };
   }
@@ -128,14 +130,24 @@ exports.advancedDocumentSearch = async ({
     }
   }
 
-  if (opinionType) {
-    docketEntryQueryParams.push({
-      term: { 'documentType.S': opinionType },
-    });
+  if (opinionTypes && opinionTypes.length) {
+    if (opinionTypes.length === 1) {
+      documentQueryFilter.push({
+        term: { 'documentType.S': opinionTypes[0] },
+      });
+    } else {
+      documentQueryFilter.push({
+        bool: {
+          should: opinionTypes.map(opinionType => ({
+            term: { 'documentType.S': opinionType },
+          })),
+        },
+      });
+    }
   }
 
   if (endDate && startDate) {
-    docketEntryQueryParams.push({
+    documentQueryFilter.push({
       range: {
         'filingDate.S': {
           gte: `${startDate}||/h`,
@@ -144,7 +156,7 @@ exports.advancedDocumentSearch = async ({
       },
     });
   } else if (startDate) {
-    docketEntryQueryParams.push({
+    documentQueryFilter.push({
       range: {
         'filingDate.S': {
           gte: `${startDate}||/h`,
@@ -183,15 +195,9 @@ exports.advancedDocumentSearch = async ({
       from,
       query: {
         bool: {
-          must: [
-            { term: { 'entityName.S': 'DocketEntry' } },
-            {
-              exists: {
-                field: 'servedAt',
-              },
-            },
-            ...docketEntryQueryParams,
-          ],
+          filter: documentQueryFilter,
+          must: docketEntryQueryParams,
+          must_not: [{ term: { 'isStricken.BOOL': true } }],
         },
       },
       size: overrideResultSize || MAX_SEARCH_CLIENT_RESULTS,

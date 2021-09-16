@@ -24,7 +24,11 @@ module.exports = {
   ],
   overrides: [
     {
-      files: ['cypress/**/*.js', 'cypress-smoketests/**/*.js'],
+      files: [
+        'cypress-integration/**/*.js',
+        'cypress-smoketests/**/*.js',
+        'cypress-readonly/**/*.js',
+      ],
       rules: {
         'jest/expect-expect': 'off',
         'jest/valid-expect': 'off',
@@ -40,6 +44,15 @@ module.exports = {
       ],
       rules: {
         'jest/expect-expect': 'off',
+      },
+    },
+    {
+      files: ['**/*.test.js'],
+      rules: {
+        'max-lines': [
+          'error',
+          { max: 500, skipBlankLines: true, skipComments: true },
+        ],
       },
     },
   ],
@@ -116,7 +129,7 @@ module.exports = {
     ],
     'max-lines': [
       'error',
-      { max: 850, skipBlankLines: true, skipComments: true }, // TODO - devex 864 - max 500 lines
+      { max: 700, skipBlankLines: true, skipComments: true },
     ],
     'no-irregular-whitespace': ['error', { skipStrings: false }],
     'no-prototype-builtins': 'off',
@@ -244,6 +257,7 @@ module.exports = {
           'court’s',
           'coversheet',
           'desc',
+          'devex',
           'disallowance',
           'dispositive',
           'docketclerk',

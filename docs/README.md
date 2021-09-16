@@ -200,7 +200,6 @@ digraph {
 	node [style = rounded, shape = box]
 
 	Code -> GitHub -> CircleCI
-	CircleCI -> SonarCloud
 	CircleCI -> AWS [label = "via Terraform"]
 }
 ```
@@ -236,3 +235,4 @@ During routine operations of EF-CMS:
 - [Receiving system health alerts](operations/system-health-alerts.md)
 - [Routine monitoring and maintenance checklist](https://github.com/ustaxcourt/ato/blob/master/Routine-Monitoring-and-Maintenance-Checklist.md)
 - [Blocking IP addresses](operations/ip-blocking.md)
+- [Maintaining production-like data for test environments](operations/production-like-data-sets.md)

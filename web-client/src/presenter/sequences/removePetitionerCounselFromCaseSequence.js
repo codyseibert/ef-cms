@@ -1,9 +1,9 @@
 import { clearModalAction } from '../actions/clearModalAction';
 import { navigateToCaseDetailCaseInformationActionFactory } from '../actions/navigateToCaseDetailCaseInformationActionFactory';
-import { removePetitionerCounselFromCaseAction } from '../actions/caseAssociation/removePetitionerCounselFromCaseAction';
+import { removePetitionerCounselFromCaseAction } from '../actions/CaseAssociation/removePetitionerCounselFromCaseAction';
 import { setAlertSuccessAction } from '../actions/setAlertSuccessAction';
 import { setSaveAlertsForNavigationAction } from '../actions/setSaveAlertsForNavigationAction';
-import { showProgressSequenceDecorator } from '../utilities/sequenceHelpers';
+import { showProgressSequenceDecorator } from '../utilities/showProgressSequenceDecorator';
 
 export const removePetitionerCounselFromCaseSequence =
   showProgressSequenceDecorator([

@@ -5,7 +5,7 @@ import { fetchUserNotificationsSequence } from './fetchUserNotificationsSequence
 import { getCaseAction } from '../actions/getCaseAction';
 import { getCaseAssociationAction } from '../actions/getCaseAssociationAction';
 import { getCaseDeadlinesForCaseAction } from '../actions/CaseDeadline/getCaseDeadlinesForCaseAction';
-import { getConsolidatedCasesByCaseAction } from '../actions/caseConsolidation/getConsolidatedCasesByCaseAction';
+import { getConsolidatedCasesByCaseAction } from '../actions/CaseConsolidation/getConsolidatedCasesByCaseAction';
 import { getConstants } from '../../getConstants';
 import { getJudgeForCurrentUserAction } from '../actions/getJudgeForCurrentUserAction';
 import { getJudgesCaseNoteForCaseAction } from '../actions/TrialSession/getJudgesCaseNoteForCaseAction';
@@ -18,7 +18,7 @@ import { runPathForUserRoleAction } from '../actions/runPathForUserRoleAction';
 import { setCaseAction } from '../actions/setCaseAction';
 import { setCaseAssociationAction } from '../actions/setCaseAssociationAction';
 import { setCaseDetailPageTabUnfrozenAction } from '../actions/CaseDetail/setCaseDetailPageTabUnfrozenAction';
-import { setConsolidatedCasesForCaseAction } from '../actions/caseConsolidation/setConsolidatedCasesForCaseAction';
+import { setConsolidatedCasesForCaseAction } from '../actions/CaseConsolidation/setConsolidatedCasesForCaseAction';
 import { setCurrentPageAction } from '../actions/setCurrentPageAction';
 import { setDefaultCaseDetailTabAction } from '../actions/setDefaultCaseDetailTabAction';
 import { setDefaultDocketRecordSortAction } from '../actions/DocketRecord/setDefaultDocketRecordSortAction';
@@ -31,11 +31,12 @@ import { setPendingEmailsOnCaseAction } from '../actions/setPendingEmailsOnCaseA
 import { setTrialSessionJudgeAction } from '../actions/setTrialSessionJudgeAction';
 import { setTrialSessionsAction } from '../actions/TrialSession/setTrialSessionsAction';
 import { showModalFromQueryAction } from '../actions/showModalFromQueryAction';
+import { startWebSocketConnectionSequenceDecorator } from '../utilities/startWebSocketConnectionSequenceDecorator';
 import { takePathForRoles } from './takePathForRoles';
 
 const { USER_ROLES } = getConstants();
 
-const gotoCaseDetailInternal = [
+const gotoCaseDetailInternal = startWebSocketConnectionSequenceDecorator([
   resetHeaderAccordionsSequence,
   getTrialSessionsAction,
   setTrialSessionsAction,
@@ -49,28 +50,30 @@ const gotoCaseDetailInternal = [
   getPendingEmailsOnCaseAction,
   setPendingEmailsOnCaseAction,
   setCurrentPageAction('CaseDetailInternal'),
-];
+]);
 
-const gotoCaseDetailExternal = [
+const gotoCaseDetailExternal = startWebSocketConnectionSequenceDecorator([
   getCaseAssociationAction,
   setCaseAssociationAction,
   setCurrentPageAction('CaseDetail'),
-];
+]);
 
-const gotoCaseDetailExternalPractitioners = [
-  getCaseAssociationAction,
-  setCaseAssociationAction,
-  getPendingEmailsOnCaseAction,
-  setPendingEmailsOnCaseAction,
-  setCurrentPageAction('CaseDetail'),
-];
+const gotoCaseDetailExternalPractitioners =
+  startWebSocketConnectionSequenceDecorator([
+    getCaseAssociationAction,
+    setCaseAssociationAction,
+    getPendingEmailsOnCaseAction,
+    setPendingEmailsOnCaseAction,
+    setCurrentPageAction('CaseDetail'),
+  ]);
 
-const gotoCaseDetailInternalWithNotes = [
-  setDocketEntryIdAction,
-  getJudgesCaseNoteForCaseAction,
-  setJudgesCaseNoteOnCaseDetailAction,
-  gotoCaseDetailInternal,
-];
+const gotoCaseDetailInternalWithNotes =
+  startWebSocketConnectionSequenceDecorator([
+    setDocketEntryIdAction,
+    getJudgesCaseNoteForCaseAction,
+    setJudgesCaseNoteOnCaseDetailAction,
+    gotoCaseDetailInternal,
+  ]);
 
 export const gotoCaseDetailSequence = [
   setCurrentPageAction('Interstitial'),

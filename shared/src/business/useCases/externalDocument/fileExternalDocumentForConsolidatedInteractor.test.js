@@ -24,6 +24,14 @@ describe('fileExternalDocumentForConsolidatedInteractor', () => {
   const docketEntryId2 = 'd2d2d2d2-b37b-479d-9201-067ec6e335bb';
   const docketEntryId3 = 'd3d3d3d3-b37b-479d-9201-067ec6e335bb';
 
+  const mockDocumentMetadataMemorandum = {
+    documentTitle: 'Memorandum in Support',
+    documentType: 'Memorandum in Support',
+    eventCode: 'MISP',
+    filedBy: 'Test Petitioner',
+    primaryDocumentId: docketEntryId0,
+  };
+
   beforeAll(() => {
     applicationContext
       .getPersistenceGateway()
@@ -150,13 +158,7 @@ describe('fileExternalDocumentForConsolidatedInteractor', () => {
       applicationContext,
       {
         docketNumbersForFiling: ['101-19', '102-19'],
-        documentMetadata: {
-          documentTitle: 'Memorandum in Support',
-          documentType: 'Memorandum in Support',
-          eventCode: 'MISP',
-          filedBy: 'Test Petitioner',
-          primaryDocumentId: docketEntryId0,
-        },
+        documentMetadata: mockDocumentMetadataMemorandum,
         leadDocketNumber: docketNumber0,
       },
     );
@@ -189,13 +191,7 @@ describe('fileExternalDocumentForConsolidatedInteractor', () => {
       applicationContext,
       {
         docketNumbersForFiling: ['101-19', '102-19'],
-        documentMetadata: {
-          documentTitle: 'Memorandum in Support',
-          documentType: 'Memorandum in Support',
-          eventCode: 'MISP',
-          filedBy: 'Test Petitioner',
-          primaryDocumentId: docketEntryId0,
-        },
+        documentMetadata: mockDocumentMetadataMemorandum,
         leadDocketNumber: docketNumber0,
       },
     );
@@ -212,32 +208,7 @@ describe('fileExternalDocumentForConsolidatedInteractor', () => {
     expect(nonLowestDocketNumberCase.docketEntries[4].workItem).toBeUndefined();
   });
 
-  it('should add a coversheet to each document', async () => {
-    await fileExternalDocumentForConsolidatedInteractor(applicationContext, {
-      docketNumbersForFiling: ['101-19', '102-19'],
-      documentMetadata: {
-        documentTitle: 'Memorandum in Support',
-        documentType: 'Memorandum in Support',
-        eventCode: 'MISP',
-        filedBy: 'Test Petitioner',
-        primaryDocumentId: docketEntryId0,
-        secondaryDocument: {
-          docketEntryId: docketEntryId1,
-          documentTitle: 'Redacted',
-          documentType: 'Redacted',
-          eventCode: 'REDC',
-          filedBy: 'Test Petitioner',
-        },
-      },
-      leadDocketNumber: docketNumber0,
-    });
-    expect(
-      applicationContext.getUseCases().addCoversheetInteractor.mock.calls
-        .length,
-    ).toBe(4);
-  });
-
-  it('should file multiple documents for each case if a secondary document is provided and add a cover sheet to each', async () => {
+  it('should file multiple documents for each case if a secondary document is provided', async () => {
     expect(caseRecords[0].docketEntries.length).toEqual(4);
     expect(caseRecords[1].docketEntries.length).toEqual(4);
 
@@ -246,11 +217,7 @@ describe('fileExternalDocumentForConsolidatedInteractor', () => {
       {
         docketNumbersForFiling: ['101-19', '102-19'],
         documentMetadata: {
-          documentTitle: 'Memorandum in Support',
-          documentType: 'Memorandum in Support',
-          eventCode: 'MISP',
-          filedBy: 'Test Petitioner',
-          primaryDocumentId: docketEntryId0,
+          ...mockDocumentMetadataMemorandum,
           secondaryDocument: {
             docketEntryId: docketEntryId1,
             documentTitle: 'Redacted',
@@ -265,10 +232,6 @@ describe('fileExternalDocumentForConsolidatedInteractor', () => {
 
     expect(result[0].docketEntries.length).toEqual(6);
     expect(result[1].docketEntries.length).toEqual(6);
-    expect(
-      applicationContext.getUseCases().addCoversheetInteractor.mock.calls
-        .length,
-    ).toBe(4);
   });
 
   it('should file multiple documents for each case when supporting documents are provided', async () => {
@@ -280,11 +243,7 @@ describe('fileExternalDocumentForConsolidatedInteractor', () => {
       {
         docketNumbersForFiling: ['101-19', '102-19'],
         documentMetadata: {
-          documentTitle: 'Memorandum in Support',
-          documentType: 'Memorandum in Support',
-          eventCode: 'MISP',
-          filedBy: 'Test Petitioner',
-          primaryDocumentId: docketEntryId0,
+          ...mockDocumentMetadataMemorandum,
           secondaryDocument: {
             docketEntryId: docketEntryId1,
             documentTitle: 'Redacted',
@@ -317,21 +276,13 @@ describe('fileExternalDocumentForConsolidatedInteractor', () => {
 
     expect(result[0].docketEntries.length).toEqual(8);
     expect(result[1].docketEntries.length).toEqual(8);
-    expect(
-      applicationContext.getUseCases().addCoversheetInteractor.mock.calls
-        .length,
-    ).toBe(8);
   });
 
   it('should use original case caption to create case title when creating work item', async () => {
     await fileExternalDocumentForConsolidatedInteractor(applicationContext, {
       docketNumbersForFiling: ['101-19', '102-19'],
       documentMetadata: {
-        documentTitle: 'Memorandum in Support',
-        documentType: 'Memorandum in Support',
-        eventCode: 'MISP',
-        filedBy: 'Test Petitioner',
-        primaryDocumentId: docketEntryId0,
+        ...mockDocumentMetadataMemorandum,
         secondaryDocument: {
           docketEntryId: docketEntryId1,
           documentTitle: 'Redacted',
@@ -349,21 +300,45 @@ describe('fileExternalDocumentForConsolidatedInteractor', () => {
     ).toMatchObject({
       caseTitle: 'Guy Fieri',
     });
-    expect(
-      applicationContext.getUseCases().addCoversheetInteractor.mock.calls
-        .length,
-    ).toBe(4);
   });
 
-  it('should add documents and workitems and auto-serve the documents on the parties with an electronic service indicator', async () => {
+  it('should not add documents if docketEntryId is undefined', async () => {
     await fileExternalDocumentForConsolidatedInteractor(applicationContext, {
       docketNumbersForFiling: ['101-19', '102-19'],
       documentMetadata: {
-        documentTitle: 'Memorandum in Support',
-        documentType: 'Memorandum in Support',
-        eventCode: 'MISP',
-        filedBy: 'Test Petitioner',
-        primaryDocumentId: docketEntryId0,
+        ...mockDocumentMetadataMemorandum,
+        primaryDocumentId: undefined,
+        secondaryDocument: {
+          documentTitle: 'Redacted',
+          documentType: 'Redacted',
+          eventCode: 'REDC',
+          filedBy: 'Test Petitioner',
+        },
+      },
+      leadDocketNumber: docketNumber0,
+    });
+
+    expect(
+      applicationContext.getPersistenceGateway().getCaseByDocketNumber,
+    ).not.toBeCalled();
+    expect(
+      applicationContext.getPersistenceGateway().updateCase,
+    ).not.toBeCalled();
+  });
+
+  it('should set work item as completed if isPaper is true', async () => {
+    applicationContext.getPersistenceGateway().getUserById.mockReturnValue({
+      name: 'Guy Fieri',
+      role: ROLES.docketClerk,
+      section: 'docket',
+      userId: 'a7d90c05-f6cd-442c-a168-202db587f16f',
+    });
+
+    await fileExternalDocumentForConsolidatedInteractor(applicationContext, {
+      docketNumbersForFiling: ['101-19', '102-19'],
+      documentMetadata: {
+        ...mockDocumentMetadataMemorandum,
+        isPaper: true,
         secondaryDocument: {
           docketEntryId: docketEntryId1,
           documentTitle: 'Redacted',
@@ -376,45 +351,36 @@ describe('fileExternalDocumentForConsolidatedInteractor', () => {
     });
 
     expect(
-      applicationContext.getPersistenceGateway().getCaseByDocketNumber,
-    ).toBeCalled();
-    expect(
-      applicationContext.getPersistenceGateway().saveWorkItem,
-    ).toBeCalled();
-    expect(applicationContext.getPersistenceGateway().updateCase).toBeCalled();
-    expect(
-      applicationContext.getUseCaseHelpers().sendServedPartiesEmails,
-    ).toHaveBeenCalled();
+      applicationContext.getPersistenceGateway().saveWorkItem.mock.calls[0][0]
+        .workItem,
+    ).toMatchObject({
+      completedMessage: 'completed',
+    });
   });
 
-  it('should not send the service email if an error occurs while adding a coversheet', async () => {
-    applicationContext
-      .getUseCases()
-      .addCoversheetInteractor.mockRejectedValueOnce(new Error('bad!'));
+  it('should not set as served when is NOT isAutoServed', async () => {
+    applicationContext.getPersistenceGateway().getUserById.mockReturnValue({
+      name: 'Guy Fieri',
+      role: ROLES.docketClerk,
+      section: 'docket',
+      userId: 'a7d90c05-f6cd-442c-a168-202db587f16f',
+    });
 
-    await expect(
-      fileExternalDocumentForConsolidatedInteractor(applicationContext, {
-        docketNumbersForFiling: ['101-19', '102-19'],
-        documentMetadata: {
-          documentTitle: 'Memorandum in Support',
-          documentType: 'Memorandum in Support',
-          eventCode: 'MISP',
-          filedBy: 'Test Petitioner',
-          primaryDocumentId: docketEntryId0,
-          secondaryDocument: {
-            docketEntryId: docketEntryId1,
-            documentTitle: 'Redacted',
-            documentType: 'Redacted',
-            eventCode: 'REDC',
-            filedBy: 'Test Petitioner',
-          },
-        },
-        leadDocketNumber: docketNumber0,
-      }),
-    ).rejects.toThrow(new Error('bad!'));
+    await fileExternalDocumentForConsolidatedInteractor(applicationContext, {
+      docketNumbersForFiling: ['101-19', '102-19'],
+      documentMetadata: {
+        documentTitle: 'Simultaneous Answer',
+        documentType: 'Answer',
+        eventCode: 'A',
+        filedBy: 'Test Petitioner',
+        isPaper: true,
+        primaryDocumentId: docketEntryId0,
+      },
+      leadDocketNumber: docketNumber0,
+    });
 
     expect(
-      applicationContext.getUseCaseHelpers().serveDocumentAndGetPaperServicePdf,
-    ).not.toBeCalled();
+      applicationContext.getUseCaseHelpers().sendServedPartiesEmails,
+    ).not.toHaveBeenCalled();
   });
 });

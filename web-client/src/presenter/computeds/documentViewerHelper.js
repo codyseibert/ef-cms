@@ -17,6 +17,10 @@ export const documentViewerHelper = (get, applicationContext) => {
       caseDetail,
     });
 
+  const isPetitionServed = !!applicationContext
+    .getUtilities()
+    .caseHasServedPetition(caseDetail);
+
   const permissions = get(state.permissions);
 
   const viewerDocumentToDisplay = get(state.viewerDocumentToDisplay);
@@ -50,9 +54,19 @@ export const documentViewerHelper = (get, applicationContext) => {
   ).includes(formattedDocumentToDisplay.eventCode);
 
   const showServeCourtIssuedDocumentButton =
-    showNotServed && isCourtIssuedDocument && permissions.SERVE_DOCUMENT;
+    isPetitionServed &&
+    showNotServed &&
+    isCourtIssuedDocument &&
+    permissions.SERVE_DOCUMENT;
+
+  const showUnservedPetitionWarning =
+    !isPetitionServed &&
+    showNotServed &&
+    !formattedDocumentToDisplay.isPetition &&
+    permissions.SERVE_DOCUMENT;
 
   const showServePaperFiledDocumentButton =
+    isPetitionServed &&
     showNotServed &&
     !isCourtIssuedDocument &&
     !formattedDocumentToDisplay.isPetition &&
@@ -71,27 +85,12 @@ export const documentViewerHelper = (get, applicationContext) => {
       d => d.eventCode === STIPULATED_DECISION_EVENT_CODE && !d.archived,
     );
 
-  let showStricken;
-
-  if (viewerDocumentToDisplay.isStricken !== undefined) {
-    showStricken = viewerDocumentToDisplay.isStricken;
-  } else {
-    const entry = formattedCaseDetail.formattedDocketEntries.find(
-      docketEntry =>
-        docketEntry.docketEntryId === viewerDocumentToDisplay.docketEntryId,
-    );
-    showStricken = entry.isStricken;
-  }
-
   const showCompleteQcButton =
     permissions.EDIT_DOCKET_ENTRY && formattedDocumentToDisplay.qcNeeded;
 
   return {
-    completeQcLink: `/case-detail/${caseDetail.docketNumber}/documents/${viewerDocumentToDisplay.docketEntryId}/edit`,
     description: formattedDocumentToDisplay.descriptionDisplay,
-    documentViewerLink: `/case-detail/${caseDetail.docketNumber}/document-view?docketEntryId=${viewerDocumentToDisplay.docketEntryId}`,
     filedLabel,
-    reviewAndServePetitionLink: `/case-detail/${caseDetail.docketNumber}/petition-qc/document-view/${viewerDocumentToDisplay.docketEntryId}`,
     servedLabel,
     showCompleteQcButton,
     showNotServed,
@@ -100,7 +99,7 @@ export const documentViewerHelper = (get, applicationContext) => {
     showServePaperFiledDocumentButton,
     showServePetitionButton,
     showSignStipulatedDecisionButton,
-    showStricken,
-    signStipulatedDecisionLink: `/case-detail/${caseDetail.docketNumber}/edit-order/${viewerDocumentToDisplay.docketEntryId}/sign`,
+    showStricken: !!formattedDocumentToDisplay.isStricken,
+    showUnservedPetitionWarning,
   };
 };

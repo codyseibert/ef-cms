@@ -252,13 +252,74 @@ jobs:
             ./wait-until-services.sh
             ./wait-until.sh http://localhost:4000/api/swagger
             sleep 5
-            npm run cypress:smoketests:local
-            sleep 5
-            npm run cypress
-      - store_artifacts:
-          path: /root/project/cypress-smoketests/videos/
+            npm run cypress:integration
       - store_artifacts:
           path: /root/project/cypress/videos/
+      - store_artifacts:
+          path: /tmp/cypress
+
+  e2e-cypress-smoketests-local:
+    docker:
+      - image: $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/ef-cms-us-east-1:latest
+        aws_auth:
+          aws_access_key_id: $AWS_ACCESS_KEY_ID
+          aws_secret_access_key: $AWS_SECRET_ACCESS_KEY
+      - image: amazon/dynamodb-local
+        command: ['-jar', 'DynamoDBLocal.jar', '-inMemory']
+        environment:
+          discovery.type: single-node
+          JAVA_OPTS: '-Xms512m -Xmx512m'
+      - image: elastic/elasticsearch:7.8.1
+        environment:
+          discovery.type: single-node
+          ES_JAVA_OPTS: '-Xms512m -Xmx512m'
+    resource_class: xlarge
+    steps:
+      - restore_cache:
+          name: Source - Restoring Cache
+          keys:
+            - source-{{ .Environment.CACHE_VERSION }}-{{ .Branch }}-{{ .Revision }}
+            - source-{{ .Environment.CACHE_VERSION }}-{{ .Branch }}-
+            - source-{{ .Environment.CACHE_VERSION }}-
+      - checkout
+      - save_cache:
+          name: Source - Saving Cache
+          key: deps-{{ .Environment.CACHE_VERSION }}-{{ .Branch }}-{{ .Revision }}
+          paths:
+            - '.git'
+      - run:
+          name: NPM - Install
+          command: |
+            npm set progress=false
+            npm ci
+            npm rebuild
+      - run:
+          name: Create Cypress Artifacts Directory
+          command: mkdir /tmp/cypress
+      - run:
+          name: Cypress
+          environment:
+            SKIP_CACHE_INVALIDATION: true
+            TEMP_DOCUMENTS_BUCKET_NAME: noop-temp-documents-local-us-east-1
+            QUARANTINE_BUCKET_NAME: noop-quarantine-local-us-east-1
+            DOCUMENTS_BUCKET_NAME: noop-documents-local-us-east-1
+            S3_ENDPOINT: http://localhost:9000
+            MASTER_DYNAMODB_ENDPOINT: http://localhost:8000
+            AWS_ACCESS_KEY_ID: S3RVER
+            AWS_SECRET_ACCESS_KEY: S3RVER
+          command: |
+            npm run build:all &&
+            CYPRESS_VERSION=`./node_modules/.bin/cypress --version | awk -F' ' '{print $4; exit}'`
+            if [ ! -e "/root/.cache/Cypress/${CYPRESS_VERSION}/Cypress/Cypress" ]; then
+              ./node_modules/.bin/cypress install
+            fi
+            npx --no-install run-p start:api:ci start:client:ci > /tmp/cypress/cypress-output.txt &
+            ./wait-until-services.sh
+            ./wait-until.sh http://localhost:4000/api/swagger
+            sleep 5
+            npm run cypress:smoketests:local
+      - store_artifacts:
+          path: /root/project/cypress-smoketests/videos/
       - store_artifacts:
           path: /tmp/cypress
 
@@ -321,7 +382,7 @@ jobs:
             ./wait-until-services.sh
             ./wait-until.sh http://localhost:4000/api/swagger
             sleep 5
-            npm run cypress:public
+            npm run cypress:integration:public
       - store_artifacts:
           path: /root/project/cypress/videos/
       - store_artifacts:
@@ -342,9 +403,7 @@ jobs:
             echo "export ZONE_NAME=$(./scripts/get-zone-name.sh $CIRCLE_BRANCH)" >> $BASH_ENV
             echo "export IRS_SUPERUSER_EMAIL=$(./scripts/get-irs-superuser-email.sh $CIRCLE_BRANCH)" >> $BASH_ENV
             echo "export DEPLOYING_COLOR=$(./scripts/get-deploying-color.sh $ENV)" >> $BASH_ENV
-            echo "export DESTINATION_TABLE=$(./scripts/get-destination-table.sh $ENV)" >> $BASH_ENV
             echo "export CURRENT_COLOR=$(./scripts/get-current-color.sh $ENV)" >> $BASH_ENV
-            echo "export MIGRATE_FLAG=$(./scripts/get-migrate-flag.sh $ENV)" >> $BASH_ENV
             echo "export BOUNCED_EMAIL_RECIPIENT=$(./scripts/get-bounced-email-recipient.sh $CIRCLE_BRANCH)" >> $BASH_ENV
       - run:
           name: Build Docker Image
@@ -378,6 +437,12 @@ jobs:
               -e "ZONE_NAME=${ZONE_NAME}" \
               -e "ENV=${ENV}" \
               --rm efcms /bin/sh -c "./setup-for-blue-green-migration.sh"
+      - run:
+          name: Setup Migrate Flag
+          command: echo "export MIGRATE_FLAG=$(./scripts/get-migrate-flag.sh $ENV)" >> $BASH_ENV
+      - run:
+          name: Setup Destination Table Var
+          command: echo "export DESTINATION_TABLE=$(./scripts/get-destination-table.sh $ENV)" >> $BASH_ENV
       - run:
           no_output_timeout: 20m
           name: 'Deploy - Web API - Terraform'
@@ -443,7 +508,7 @@ jobs:
              -e "EFCMS_DOMAIN=${EFCMS_DOMAIN}" \
              -e "SESSION_TIMEOUT=${SESSION_TIMEOUT}" \
              -e "SESSION_MODAL_TIMEOUT=${SESSION_MODAL_TIMEOUT}" \
-             --rm efcms /bin/sh -c "./scripts/deploy-ui.sh"
+             --rm efcms /bin/sh -c "./web-client/deploy-ui.sh"
       - run:
           name: 'Deploy - Public Web Client - S3'
           command: |
@@ -458,7 +523,7 @@ jobs:
              -e "EFCMS_DOMAIN=${EFCMS_DOMAIN}" \
              -e "ENV=${ENV}" \
              -e "STATUSPAGE_DNS_RECORD=${STATUSPAGE_DNS_RECORD}" \
-             --rm efcms /bin/sh -c "./scripts/deploy-public.sh"
+             --rm efcms /bin/sh -c "./web-client/deploy-public.sh"
       - run:
           name: 'Deploy - Web API - Cognito Customize'
           command: |
@@ -536,12 +601,14 @@ jobs:
           command: |
             ENV=$(./scripts/get-env.sh $CIRCLE_BRANCH)
             echo "export ENV=$ENV" >> $BASH_ENV
+            EFCMS_DOMAIN=$(./scripts/get-efcms-domain.sh $CIRCLE_BRANCH)
+            echo "export EFCMS_DOMAIN=$EFCMS_DOMAIN" >> $BASH_ENV
             echo "export MIGRATE_FLAG=$(./scripts/get-migrate-flag.sh $ENV)" >> $BASH_ENV
             echo "export DEPLOYING_COLOR=$(./scripts/get-deploying-color.sh $ENV)" >> $BASH_ENV
             echo "export DESTINATION_TABLE=$(./scripts/get-destination-table.sh $ENV)" >> $BASH_ENV
             echo "export SOURCE_TABLE=$(./scripts/get-source-table.sh $ENV)" >> $BASH_ENV
             echo "export ZONE_NAME=$(./scripts/get-zone-name.sh $CIRCLE_BRANCH)" >> $BASH_ENV
-            echo "export EFCMS_DOMAIN=$(./scripts/get-efcms-domain.sh $CIRCLE_BRANCH)" >> $BASH_ENV
+            echo "export DOCUMENTS_BUCKET_NAME=$(./scripts/get-documents-bucket-name.sh $EFCMS_DOMAIN $ENV)" >> $BASH_ENV
       - run:
           name: Build Docker Image
           command: |
@@ -557,6 +624,7 @@ jobs:
                -e "EFCMS_DOMAIN=${EFCMS_DOMAIN}" \
                -e "SOURCE_TABLE=${SOURCE_TABLE}" \
                -e "ZONE_NAME=${ZONE_NAME}" \
+               -e "DOCUMENTS_BUCKET_NAME=${DOCUMENTS_BUCKET_NAME}" \
                --rm efcms /bin/sh -c "npm run deploy:migration -- ${ENV}"
             fi
       - run:
@@ -584,6 +652,7 @@ jobs:
                -e "SOURCE_TABLE=${SOURCE_TABLE}" \
                -e "STREAM_ARN=${STREAM_ARN}" \
                -e "ZONE_NAME=${ZONE_NAME}" \
+               -e "DOCUMENTS_BUCKET_NAME=${DOCUMENTS_BUCKET_NAME}" \
                --rm efcms /bin/sh -c "npm run start:migration -- ${ENV}"
             fi
       - run:
@@ -599,6 +668,17 @@ jobs:
                --rm efcms /bin/sh -c "./wait-for-migration-to-finish.sh"
             fi
       - run:
+          name: Track successful migrations
+          command: |
+            if [ "$MIGRATE_FLAG" == "true" ]; then
+              docker run \
+                -e "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}" \
+                -e "AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID}" \
+                -e "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}" \
+                -e "ENV=${ENV}" \
+                --rm efcms /bin/sh -c "node ./web-api/track-successful-migrations.js"
+            fi
+      - run:
           name: Enable Destination Table Stream
           command: |
             if [ "$MIGRATE_FLAG" == "true" ]; then
@@ -609,6 +689,19 @@ jobs:
                 -e "DEPLOYING_COLOR=${DEPLOYING_COLOR}" \
                 -e "ENV=${ENV}" \
                 --rm efcms /bin/sh -c "./web-api/enable-deploying-dynamo-stream-trigger.sh"
+            fi
+      - run:
+          name: Wait for Reindex to Finish
+          command: |
+            if [ "$MIGRATE_FLAG" == "true" ]; then
+              docker run \
+                -e "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}" \
+                -e "AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID}" \
+                -e "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}" \
+                -e "DESTINATION_TABLE=${DESTINATION_TABLE}" \
+                -e "DEPLOYING_COLOR=${DEPLOYING_COLOR}" \
+                -e "ENV=${ENV}" \
+                --rm efcms /bin/sh -c "./wait-for-reindex-to-finish.sh"
             fi
 
   smoketests:
@@ -639,6 +732,9 @@ jobs:
             echo "export DEPLOYING_COLOR=$(./scripts/get-deploying-color.sh $ENV)" >> $BASH_ENV
             echo "export DISABLE_EMAILS='$(./scripts/get-disable-emails.sh $CIRCLE_BRANCH)'" >> $BASH_ENV
       - run:
+          name: 'Disable Maintenance Mode'
+          command: npm run maintenance:disengage $ENV
+      - run:
           name: 'Cypress Smoke Tests'
           command: npm run cypress:smoketests
       - run:
@@ -647,7 +743,7 @@ jobs:
       - store_artifacts:
           path: /root/project/cypress-smoketests/videos/
 
-  switch-colors:
+  smoketests-readonly:
     docker:
       - image: $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/ef-cms-us-east-1:latest
         aws_auth:
@@ -673,20 +769,61 @@ jobs:
             echo "export EFCMS_DOMAIN=$(./scripts/get-efcms-domain.sh $CIRCLE_BRANCH)" >> $BASH_ENV
             echo "export ZONE_NAME=$(./scripts/get-zone-name.sh $CIRCLE_BRANCH)" >> $BASH_ENV
             echo "export DEPLOYING_COLOR=$(./scripts/get-deploying-color.sh $ENV)" >> $BASH_ENV
+            echo "export DISABLE_EMAILS='$(./scripts/get-disable-emails.sh $CIRCLE_BRANCH)'" >> $BASH_ENV
+            echo "export DEFAULT_ACCOUNT_PASS=$DEFAULT_ACCOUNT_PASS" >> $BASH_ENV
+            echo "export USTC_ADMIN_PASS=$USTC_ADMIN_PASS" >> $BASH_ENV
+            echo "export USTC_ADMIN_USER=$USTC_ADMIN_USER" >> $BASH_ENV
+      - run:
+          name: Create and Enable Test User
+          command: node ./scripts/create-and-enable-smoketest-user.js
+      - run:
+          name: 'Cypress Readonly Smoke Tests'
+          command: |
+            set +e
+            npm run cypress:readonly
+            echo "export READONLY_SMOKETESTS_RESULT=$?" >> $BASH_ENV
+            set -e
+      - run:
+          name: Disable Test User
+          command: node ./scripts/disable-smoketest-user.js
+      - run:
+          name: Kill Build if Smoketests Failed
+          command: ./scripts/kill-circle-build.sh
+      - run:
+          name: 'Cypress Public Readonly Smoke Tests'
+          command: npm run cypress:readonly:public
+      - store_artifacts:
+          path: /root/project/cypress-smoketests-readonly/videos/
+
+  switch-colors:
+    docker:
+      - image: $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/ef-cms-us-east-1:latest
+        aws_auth:
+          aws_access_key_id: $AWS_ACCESS_KEY_ID
+          aws_secret_access_key: $AWS_SECRET_ACCESS_KEY
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: NPM - Install
+          command: |
+            npm set progress=false
+            npm ci
+            npm rebuild
+      - run:
+          name: Create Cypress Artifacts Directory
+          command: mkdir /tmp/cypress
+      - run:
+          name: Setup Env
+          command: |
+            ENV=$(./scripts/get-env.sh $CIRCLE_BRANCH)
+            echo "export ENV=$ENV" >> $BASH_ENV
+            echo "export MIGRATE_FLAG=$(./scripts/get-migrate-flag.sh $ENV)" >> $BASH_ENV
+            echo "export EFCMS_DOMAIN=$(./scripts/get-efcms-domain.sh $CIRCLE_BRANCH)" >> $BASH_ENV
+            echo "export ZONE_NAME=$(./scripts/get-zone-name.sh $CIRCLE_BRANCH)" >> $BASH_ENV
+            echo "export DEPLOYING_COLOR=$(./scripts/get-deploying-color.sh $ENV)" >> $BASH_ENV
             echo "export CURRENT_COLOR=$(./scripts/get-current-color.sh $ENV)" >> $BASH_ENV
             echo "export AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID >> $BASH_ENV"
-      - run:
-          name: Track successful migrations
-          command: |
-            if [ "$MIGRATE_FLAG" == "true" ]; then
-              docker run \
-                -e "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}" \
-                -e "AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID}" \
-                -e "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}" \
-                -e "DEPLOYING_COLOR=${DEPLOYING_COLOR}" \
-                -e "ENV=${ENV}" \
-                --rm efcms /bin/sh -c "node ./web-api/track-successful-migrations.js"
-            fi
       - run:
           name: 'Switch Colors'
           command: npm run switch-colors
@@ -721,6 +858,7 @@ workflows:
       - e2e-pa11y
       - e2e-pa11y-public
       - e2e-cypress
+      - e2e-cypress-smoketests-local
       - e2e-cypress-public
       - deploy:
           requires:
@@ -728,6 +866,7 @@ workflows:
             - e2e-pa11y
             - e2e-pa11y-public
             - e2e-cypress
+            - e2e-cypress-smoketests-local
             - e2e-cypress-public
       - migrate:
           requires:
@@ -735,9 +874,12 @@ workflows:
       - smoketests:
           requires:
             - migrate
-      - switch-colors:
+      - smoketests-readonly:
           requires:
             - smoketests
+      - switch-colors:
+          requires:
+            - smoketests-readonly
     triggers:
       - schedule:
           cron: '0 13-22 * * 1-5'
@@ -755,6 +897,8 @@ workflows:
           <<: *build-and-deploy-defaults
       - e2e-cypress:
           <<: *build-and-deploy-defaults
+      - e2e-cypress-smoketests-local:
+          <<: *build-and-deploy-defaults
       - e2e-cypress-public:
           <<: *build-and-deploy-defaults
       - deploy:
@@ -763,6 +907,7 @@ workflows:
             - e2e-pa11y
             - e2e-pa11y-public
             - e2e-cypress
+            - e2e-cypress-smoketests-local
             - e2e-cypress-public
           filters:
             branches:
@@ -805,9 +950,23 @@ workflows:
                 - experimental3
                 - experimental4
                 - experimental5
-      - switch-colors:
+      - smoketests-readonly:
           requires:
             - smoketests
+          filters:
+            branches:
+              only:
+                - irs
+                - staging
+                - test
+                - experimental1
+                - experimental2
+                - experimental3
+                - experimental4
+                - experimental5
+      - switch-colors:
+          requires:
+            - smoketests-readonly
           filters:
             branches:
               only:
@@ -831,6 +990,8 @@ workflows:
           <<: *build-and-deploy-without-smoketests-defaults
       - e2e-cypress:
           <<: *build-and-deploy-without-smoketests-defaults
+      - e2e-cypress-smoketests-local:
+          <<: *build-and-deploy-without-smoketests-defaults
       - e2e-cypress-public:
           <<: *build-and-deploy-without-smoketests-defaults
       - deploy:
@@ -840,6 +1001,7 @@ workflows:
             - e2e-pa11y
             - e2e-pa11y-public
             - e2e-cypress
+            - e2e-cypress-smoketests-local
             - e2e-cypress-public
       - migrate:
           <<: *build-and-deploy-without-smoketests-defaults
@@ -860,6 +1022,8 @@ workflows:
           <<: *build-and-deploy-with-context-defaults
       - e2e-cypress:
           <<: *build-and-deploy-with-context-defaults
+      - e2e-cypress-smoketests-local:
+          <<: *build-and-deploy-with-context-defaults
       - e2e-cypress-public:
           <<: *build-and-deploy-with-context-defaults
       - deploy:
@@ -869,8 +1033,17 @@ workflows:
             - e2e-pa11y
             - e2e-pa11y-public
             - e2e-cypress
+            - e2e-cypress-smoketests-local
             - e2e-cypress-public
       - migrate:
           <<: *build-and-deploy-with-context-defaults
           requires:
             - deploy
+      - smoketests-readonly:
+          <<: *build-and-deploy-with-context-defaults
+          requires:
+            - migrate
+      - switch-colors:
+          <<: *build-and-deploy-with-context-defaults
+          requires:
+            - smoketests-readonly
