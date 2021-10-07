@@ -9919,6 +9919,16 @@
     "email": "irsSuperuser@example.com"
   },
   {
+    "role": "terminal",
+    "entityName": "User",
+    "sk": "user|22c9d614-e498-4dae-b0f5-751b9ab5e8b3",
+    "name": "Test Terminal User",
+    "section": "terminal",
+    "pk": "user|22c9d614-e498-4dae-b0f5-751b9ab5e8b3",
+    "userId": "22c9d614-e498-4dae-b0f5-751b9ab5e8b3",
+    "email": "terminal@example.com"
+  },
+  {
     "caseOrder": [],
     "gsi1pk": "trial-session-catalog",
     "trialLocation": "Birmingham, Alabama",

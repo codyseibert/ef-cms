@@ -684,5 +684,13 @@
     "userId": "02c9b614-e498-4dae-b0f5-751b9ab5e8b3",
     "email": "irsSuperuser@example.com",
     "entityName": "User"
+  },
+  {
+    "role": "terminal",
+    "name": "Test Terminal User",
+    "section": "terminal",
+    "userId": "22c9d614-e498-4dae-b0f5-751b9ab5e8b3",
+    "email": "terminal@example.com",
+    "entityName": "User"
   }
 ]

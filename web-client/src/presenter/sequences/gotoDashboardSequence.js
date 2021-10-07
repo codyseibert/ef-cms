@@ -8,6 +8,7 @@ import { getMaintenanceModeAction } from '../actions/getMaintenanceModeAction';
 import { getOpenAndClosedCasesByUserAction } from '../actions/CaseConsolidation/getOpenAndClosedCasesByUserAction';
 import { getTrialSessionsAction } from '../actions/TrialSession/getTrialSessionsAction';
 import { getUserAction } from '../actions/getUserAction';
+import { gotoAdvancedSearchSequence } from './gotoAdvancedSearchSequence';
 import { gotoMaintenanceSequence } from './gotoMaintenanceSequence';
 import { isLoggedInAction } from '../actions/isLoggedInAction';
 import { navigateToMessagesAction } from '../actions/navigateToMessagesAction';
@@ -99,6 +100,7 @@ const goToDashboard = [
               setCasesAction,
               setCurrentPageAction('DashboardPractitioner'),
             ],
+            terminal: [gotoAdvancedSearchSequence],
           },
         ],
       },

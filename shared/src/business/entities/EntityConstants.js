@@ -661,6 +661,7 @@ const ROLES = {
   privatePractitioner: 'privatePractitioner',
   reportersOffice: 'reportersOffice',
   trialClerk: 'trialclerk',
+  terminal: 'terminal',
 };
 
 const FILING_TYPES = {
