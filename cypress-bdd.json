@@ -1,0 +1,19 @@
+{
+  "baseUrl": "http://localhost:1234",
+  "browser": "edge",
+  "reporter": "spec",
+  "reporterOptions": {
+    "toConsole": true
+  },
+  "fixturesFolder": "cypress-bdd/fixtures",
+  "integrationFolder": "cypress-bdd/integration",
+  "pluginsFile": "cypress-bdd/plugins/index.js",
+  "screenshotsFolder": "cypress-bdd/screenshots",
+  "videosFolder": "cypress-bdd/videos",
+  "defaultCommandTimeout": 20000,
+  "requestTimeout": 12000,
+  "viewportWidth": 1200,
+  "viewportHeight": 900,
+  "retries": 3,
+  "testFiles": "*.{feature,features}"
+}
