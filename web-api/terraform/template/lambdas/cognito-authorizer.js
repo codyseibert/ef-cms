@@ -1,9 +1,7 @@
 const axios = require('axios');
 const jwk = require('jsonwebtoken');
 const jwkToPem = require('jwk-to-pem');
-const {
-  createLogger,
-} = require('../../../../shared/src/utilities/createLogger');
+const { createLogger } = require('../../../src/createLogger');
 const { transports } = require('winston');
 
 const transport = new transports.Console({
@@ -34,6 +32,8 @@ const getToken = event => {
     return event.queryStringParameters.token;
   } else if (event.authorizationToken) {
     return event.authorizationToken.substring(7);
+  } else if (event.headers?.authorization) {
+    return event.headers.authorization.substring(7);
   }
 };
 

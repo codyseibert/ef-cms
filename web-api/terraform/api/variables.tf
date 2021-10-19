@@ -10,11 +10,19 @@ variable "authorizer_uri" {
   type = string
 }
 
+variable "public_authorizer_uri" {
+  type = string
+}
+
 variable "account_id" {
   type = string
 }
 
 variable "zone_id" {
+  type = string
+}
+
+variable "pool_arn" {
   type = string
 }
 
@@ -114,6 +122,19 @@ variable "stream_arn" {
   type = string
 }
 
+variable "create_triggers" {
+  type = number  
+  default = 1
+}
+
 variable "web_acl_arn" {
+  type = string
+}
+
+variable "triggers_object" {
+  type = any
+}
+
+variable "triggers_object_hash" {
   type = string
 }

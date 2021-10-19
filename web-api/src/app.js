@@ -1,6 +1,5 @@
 /* eslint-disable max-lines */
 const awsServerlessExpressMiddleware = require('@vendia/serverless-express/middleware');
-const bodyParser = require('body-parser');
 const cors = require('cors');
 const express = require('express');
 const logger = require('./logger');
@@ -9,8 +8,8 @@ const { lambdaWrapper } = require('./lambdaWrapper');
 const app = express();
 
 app.use(cors());
-app.use(bodyParser.json({ limit: '1200kb' }));
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.json({ limit: '1200kb' }));
+app.use(express.urlencoded({ extended: true }));
 app.use((req, res, next) => {
   if (process.env.NODE_ENV !== 'production') {
     // we added this to suppress error `Missing x-apigateway-event or x-apigateway-context header(s)` locally
@@ -59,6 +58,9 @@ const {
 const {
   checkEmailAvailabilityLambda,
 } = require('./users/checkEmailAvailabilityLambda');
+const {
+  closeTrialSessionLambda,
+} = require('./trialSessions/closeTrialSessionLambda');
 const {
   completeDocketEntryQCLambda,
 } = require('./documents/completeDocketEntryQCLambda');
@@ -385,6 +387,7 @@ const { deleteCaseNoteLambda } = require('./caseNote/deleteCaseNoteLambda');
 const { editPaperFilingLambda } = require('./documents/editPaperFilingLambda');
 const { forwardMessageLambda } = require('./messages/forwardMessageLambda');
 const { getBlockedCasesLambda } = require('./reports/getBlockedCasesLambda');
+const { getCaseExistsLambda } = require('./cases/getCaseExistsLambda');
 const { getCaseLambda } = require('./cases/getCaseLambda');
 const { getCaseLambda: v1GetCaseLambda } = require('./v1/getCaseLambda');
 const { getCaseLambda: v2GetCaseLambda } = require('./v2/getCaseLambda');
@@ -740,6 +743,7 @@ const { validatePdfLambda } = require('./documents/validatePdfLambda');
     '/cases/:docketNumber',
     lambdaWrapper(saveCaseDetailInternalEditLambda),
   );
+  app.head('/cases/:docketNumber', lambdaWrapper(getCaseExistsLambda));
   app.get('/cases/:docketNumber', lambdaWrapper(getCaseLambda));
   app.post('/cases', lambdaWrapper(createCaseLambda));
 }
@@ -948,6 +952,10 @@ app.get(
   app.post(
     '/trial-sessions/:trialSessionId/set-hearing/:docketNumber',
     lambdaWrapper(setForHearingLambda),
+  );
+  app.post(
+    '/trial-sessions/:trialSessionId/close',
+    lambdaWrapper(closeTrialSessionLambda),
   );
 }
 

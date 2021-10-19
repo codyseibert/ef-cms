@@ -5,6 +5,7 @@ const express = require('express');
 const logger = require('./logger');
 const { lambdaWrapper } = require('./lambdaWrapper');
 const app = express();
+const { set } = require('lodash');
 
 app.use(cors());
 app.use(bodyParser.json());
@@ -19,6 +20,36 @@ app.use((req, res, next) => {
   return next();
 });
 app.use(awsServerlessExpressMiddleware.eventContext());
+
+app.use(async (req, res, next) => {
+  // This code is here so that we have a way to mock out the terminal user
+  // via using dynamo locally.  This is only ran locally and on CI/CD which is
+  // why we also lazy require some of these packages.  See story 8955 for more info.
+  if (process.env.NODE_ENV !== 'production') {
+    const createApplicationContext = require('./applicationContext');
+    const {
+      get,
+    } = require('../../shared/src/persistence/dynamodbClientService.js');
+    const applicationContext = createApplicationContext();
+    const whitelist = await get({
+      Key: {
+        pk: 'allowed-terminal-ips',
+        sk: 'allowed-terminal-ips',
+      },
+      applicationContext,
+    });
+    const ips = whitelist?.ips ?? [];
+
+    if (ips.includes('localhost')) {
+      set(
+        req,
+        'apiGateway.event.requestContext.authorizer.isTerminalUser',
+        'true',
+      );
+    }
+  }
+  return next();
+});
 app.use(logger());
 
 const {
@@ -33,6 +64,9 @@ const {
 const {
   getMaintenanceModeLambda,
 } = require('./maintenance/getMaintenanceModeLambda');
+const {
+  getPublicCaseExistsLambda,
+} = require('./public-api/getPublicCaseExistsLambda');
 const {
   getPublicDocumentDownloadUrlLambda,
 } = require('./public-api/getPublicDocumentDownloadUrlLambda');
@@ -54,6 +88,10 @@ const { todaysOrdersLambda } = require('./public-api/todaysOrdersLambda');
  * public-api
  */
 app.get('/public-api/search', lambdaWrapper(casePublicSearchLambda));
+app.head(
+  '/public-api/cases/:docketNumber',
+  lambdaWrapper(getPublicCaseExistsLambda),
+);
 app.get('/public-api/cases/:docketNumber', lambdaWrapper(getPublicCaseLambda));
 
 // Temporarily disabled for story 7387
@@ -81,8 +119,10 @@ app.get(
   lambdaWrapper(getPublicDocumentDownloadUrlLambda),
 );
 app.get('/public-api/health', lambdaWrapper(getHealthCheckLambda));
+
 app.get(
   '/public-api/maintenance-mode',
+  cors({ exposedHeaders: ['X-Terminal-User'] }),
   lambdaWrapper(getMaintenanceModeLambda),
 );
 

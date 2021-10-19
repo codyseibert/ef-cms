@@ -2,7 +2,7 @@ const moize = require('moize').default;
 
 /**
  *
- * get
+ * head
  *
  * @param {object} providers the providers object
  * @param {object} providers.applicationContext the application context
@@ -10,11 +10,11 @@ const moize = require('moize').default;
  * @param {object} providers.params the params to send to the endpoint
  * @returns {Promise<*>} the response data
  */
-const get = async ({ applicationContext, endpoint, params }) => {
+exports.head = async ({ applicationContext, endpoint, params }) => {
   const token = applicationContext.getCurrentUserToken();
   return await applicationContext
     .getHttpClient()
-    .get(`${applicationContext.getBaseUrl()}${endpoint}`, {
+    .head(`${applicationContext.getBaseUrl()}${endpoint}`, {
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
@@ -22,6 +22,45 @@ const get = async ({ applicationContext, endpoint, params }) => {
     })
     .then(response => response.data);
 };
+
+/**
+ *
+ * get
+ *
+ * @param {object} providers the providers object
+ * @param {object} providers.applicationContext the application context
+ * @param {string} providers.endpoint the endpoint to call
+ * @param {object} providers.params the params to send to the endpoint
+ * @returns {Promise<*>} the response body data
+ */
+const get = async ({ applicationContext, endpoint, params }) => {
+  const response = await getResponse({ applicationContext, endpoint, params });
+  return response.data;
+};
+
+/**
+ *
+ * getResponse
+ *
+ * @param {object} providers the providers object
+ * @param {object} providers.applicationContext the application context
+ * @param {string} providers.endpoint the endpoint to call
+ * @param {object} providers.params the params to send to the endpoint
+ * @returns {Promise<*>} the complete http response
+ */
+const getResponse = ({ applicationContext, endpoint, params }) => {
+  const token = applicationContext.getCurrentUserToken();
+  return applicationContext
+    .getHttpClient()
+    .get(`${applicationContext.getBaseUrl()}${endpoint}`, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      params,
+    });
+};
+
+exports.getResponse = getResponse;
 
 const getMemoized = moize({
   equals(cacheKeyArgument, keyArgument) {

@@ -12,9 +12,6 @@ const {
   SERVICE_INDICATOR_TYPES,
 } = require('../entities/EntityConstants');
 const {
-  createDocketEntryAndWorkItem,
-} = require('../useCaseHelper/service/createChangeItems');
-const {
   isAuthorized,
   ROLE_PERMISSIONS,
 } = require('../../authorization/authorizationClientService');
@@ -46,8 +43,57 @@ const getIsUserAuthorized = ({ oldCase, updatedPetitionerData, user }) => {
   );
 };
 
+const updateCaseEntityAndGenerateChange = async ({
+  applicationContext,
+  caseEntity,
+  petitionerOnCase,
+  user,
+  userHasAnEmail,
+}) => {
+  const newData = {
+    email: petitionerOnCase.newEmail,
+    name: petitionerOnCase.name,
+  };
+  const oldData = { email: petitionerOnCase.oldEmail };
+
+  const servedParties = aggregatePartiesForService(caseEntity);
+
+  const isContactRepresented =
+    caseEntity.isUserIdRepresentedByPrivatePractitioner(
+      petitionerOnCase.contactId,
+    );
+
+  if (!isContactRepresented) {
+    petitionerOnCase.serviceIndicator = SERVICE_INDICATOR_TYPES.SI_ELECTRONIC;
+  }
+
+  const documentType = applicationContext
+    .getUtilities()
+    .getDocumentTypeForAddressChange({ newData, oldData });
+
+  if (userHasAnEmail && caseEntity.shouldGenerateNoticesForCase()) {
+    const { changeOfAddressDocketEntry } = await applicationContext
+      .getUseCaseHelpers()
+      .generateAndServeDocketEntry({
+        applicationContext,
+        caseEntity,
+        documentType,
+        isContactRepresented,
+        newData,
+        oldData,
+        servedParties,
+        user,
+      });
+    caseEntity.addDocketEntry(changeOfAddressDocketEntry);
+  }
+
+  return caseEntity.validate();
+};
+
 /**
  * updatePetitionerInformationInteractor
+ *
+ * this interactor is invoked when an internal user updates the petitioner information from the parties tab.
  *
  * @param {object} applicationContext the application context
  * @param {object} providers the providers object
@@ -80,7 +126,6 @@ const updatePetitionerInformationInteractor = async (
       `Case with docketNumber ${oldCase.docketNumber} has not been served`,
     );
   }
-
   const oldCaseContact = getPetitionerById(
     oldCase,
     updatedPetitionerData.contactId,
@@ -116,7 +161,7 @@ const updatePetitionerInformationInteractor = async (
     ],
   );
 
-  const petitionerInfoChange = applicationContext
+  const documentTypeToGenerate = applicationContext
     .getUtilities()
     .getDocumentTypeForAddressChange({
       newData: editableFields,
@@ -151,49 +196,49 @@ const updatePetitionerInformationInteractor = async (
 
   const servedParties = aggregatePartiesForService(caseEntity);
 
-  let petitionerChangeDocs;
-  let serviceResults;
+  let serviceUrl;
 
   const updatedCaseContact = caseEntity.getPetitionerById(
     updatedPetitionerData.contactId,
   );
 
-  if (petitionerInfoChange && !updatedCaseContact.isAddressSealed) {
-    const partyWithPaperService = caseEntity.hasPartyWithServiceType(
-      SERVICE_INDICATOR_TYPES.SI_PAPER,
-    );
+  const hasPetitionerInfoChanged = !!documentTypeToGenerate;
 
+  const updateAddressOrPhone =
+    hasPetitionerInfoChanged &&
+    !updatedCaseContact.isAddressSealed &&
+    caseEntity.shouldGenerateNoticesForCase();
+
+  // shouldGenerateNoticesForCase(caseEntity)
+  if (updateAddressOrPhone) {
     const privatePractitionersRepresentingContact =
       caseEntity.isUserIdRepresentedByPrivatePractitioner(
-        updatedCaseContact.contactId,
+        oldCaseContact.contactId,
       );
 
-    petitionerChangeDocs = await createDocketEntryAndWorkItem({
-      applicationContext,
-      caseEntity,
-      change: petitionerInfoChange,
-      editableFields,
-      oldCaseContact,
-      partyWithPaperService,
-      privatePractitionersRepresentingContact,
-      servedParties,
-      user,
-    });
+    const newData = editableFields;
+    const oldData = oldCaseContact;
 
-    serviceResults = await applicationContext
+    const { url } = await applicationContext
       .getUseCaseHelpers()
-      .serveDocumentAndGetPaperServicePdf({
+      .generateAndServeDocketEntry({
         applicationContext,
         caseEntity,
-        docketEntryId:
-          petitionerChangeDocs.changeOfAddressDocketEntry.docketEntryId,
+        documentType: documentTypeToGenerate,
+        newData,
+        oldData,
+        privatePractitionersRepresentingContact,
+        servedParties,
+        user,
       });
+    serviceUrl = url;
   }
 
-  if (
+  const shouldUpdateEmailAddress =
     updatedPetitionerData.updatedEmail &&
-    updatedPetitionerData.updatedEmail !== oldCaseContact.email
-  ) {
+    updatedPetitionerData.updatedEmail !== oldCaseContact.email;
+
+  if (shouldUpdateEmailAddress) {
     const isEmailAvailable = await applicationContext
       .getPersistenceGateway()
       .isEmailAvailable({
@@ -208,18 +253,37 @@ const updatePetitionerInformationInteractor = async (
           caseEntity,
           contactId: updatedPetitionerData.contactId,
           email: updatedPetitionerData.updatedEmail,
-          name: updatedCaseContact.name,
+          name: oldCaseContact.name,
         });
     } else {
-      caseEntity = await applicationContext
+      const contactId = await applicationContext
         .getUseCaseHelpers()
         .addExistingUserToCase({
           applicationContext,
           caseEntity,
           contactId: updatedPetitionerData.contactId,
           email: updatedPetitionerData.updatedEmail,
-          name: updatedCaseContact.name,
+          name: oldCaseContact.name,
         });
+
+      oldCaseContact.oldEmail = oldCaseContact.email;
+      oldCaseContact.newEmail = updatedPetitionerData.updatedEmail;
+      oldCaseContact.contactId = contactId;
+
+      const userToUpdate = await applicationContext
+        .getPersistenceGateway()
+        .getUserById({
+          applicationContext,
+          userId: oldCaseContact.contactId,
+        });
+
+      await updateCaseEntityAndGenerateChange({
+        applicationContext,
+        caseEntity,
+        petitionerOnCase: oldCaseContact,
+        user,
+        userHasAnEmail: userToUpdate.email,
+      });
     }
   }
 
@@ -232,7 +296,7 @@ const updatePetitionerInformationInteractor = async (
 
   return {
     paperServiceParties: servedParties.paper,
-    paperServicePdfUrl: serviceResults?.url,
+    paperServicePdfUrl: serviceUrl,
     updatedCase,
   };
 };
