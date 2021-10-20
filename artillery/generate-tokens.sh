@@ -68,7 +68,6 @@ declare -a users=(
 )
 
 rm tokens.csv || true
-echo "token" >> tokens.csv
 
 for user in "${users[@]}"
 do
