@@ -14,7 +14,6 @@ exports.batchDownloadTrialSessionInteractor = (
 ) => {
   return get({
     applicationContext,
-    body: {},
     endpoint: `/async/trial-sessions/${trialSessionId}/batch-download`,
   });
 };

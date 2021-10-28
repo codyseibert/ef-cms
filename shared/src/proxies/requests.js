@@ -1,4 +1,4 @@
-const moize = require('moize').default;
+const { memo } = require('../../../web-client/src/presenter/utilities/memo');
 
 /**
  *
@@ -62,14 +62,13 @@ const getResponse = ({ applicationContext, endpoint, params }) => {
 
 exports.getResponse = getResponse;
 
-const getMemoized = moize({
-  equals(cacheKeyArgument, keyArgument) {
-    return cacheKeyArgument.endpoint === keyArgument.endpoint;
+const getMemoized = memo(get, {
+  getKey: args => {
+    console.log(args[0].params);
+    return args[0].endpoint + ' ' + args[0].params;
   },
-  isPromise: true,
-  maxAge: 5 * 1000, // five seconds
-  updateExpire: true,
-})(get);
+  maxAge: 10 * 1000,
+});
 
 exports.get = process.env.CI ? get : getMemoized;
 
