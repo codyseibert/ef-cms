@@ -1,54 +1,89 @@
 const { get } = require('lodash');
 
-export const lambdaWrapper = lambda => {
-  return async (req, res) => {
-    // If you'd like to test the terminal user functionality locally, make this boolean true
-    let isTerminalUser =
-      get(req, 'apiGateway.event.requestContext.authorizer.isTerminalUser') ===
-      'true';
+export const LAMBDA_TIMEOUT_PUBLIC = 1 * 60 * 1000; // 1 minute timeout
+export const LAMBDA_TIMEOUT_INTERNAL = 20 * 60 * 1000; // 20 minute timeout (for async lambdas)
 
-    const event = {
-      headers: req.headers,
-      isTerminalUser,
-      path: req.path,
-      pathParameters: req.params,
-      queryStringParameters: req.query,
-    };
+const RESPONSE_HEADERS_COMMON = {
+  'Access-Control-Allow-Origin': '*',
+  'Content-Type': 'application/json',
+  'X-Content-Type-Options': 'nosniff',
+};
 
-    req.setTimeout(20 * 60 * 1000); // 20 minute timeout (for async lambdas)
+export const RESPONSE_HEADERS_PUBLIC = {
+  ...RESPONSE_HEADERS_COMMON,
+};
 
-    const response = await lambda({
-      ...event,
-      body: JSON.stringify(req.body),
-      logger: req.locals.logger,
-    });
+export const RESPONSE_HEADERS_INTERNAL = {
+  ...RESPONSE_HEADERS_COMMON,
+  'Cache-Control': 'max-age=0, private, no-cache, no-store, must-revalidate',
+  Pragma: 'no-cache',
+  Vary: 'Authorization',
+};
 
-    res.status(response.statusCode);
+const sendLambdaResponse = ({ lambdaResponse, res }) => {
+  if (
+    ['application/pdf', 'text/html'].includes(
+      lambdaResponse.headers['Content-Type'],
+    )
+  ) {
+    res.set('Content-Type', lambdaResponse.headers['Content-Type']);
+    res.send(lambdaResponse.body);
+  } else if (lambdaResponse.headers['Content-Type'] === 'application/json') {
+    res.send(JSON.parse(lambdaResponse.body || 'null'));
+  } else if (lambdaResponse.headers.Location) {
+    res.redirect(lambdaResponse.headers.Location);
+  } else {
+    console.log('ERROR: we do not support this return type');
+  }
+};
 
-    res.set({
-      'Access-Control-Allow-Origin': '*',
-      'Cache-Control':
-        'max-age=0, private, no-cache, no-store, must-revalidate',
-      'Content-Type': 'application/json',
-      Pragma: 'no-cache',
-      Vary: 'Authorization',
-      'X-Content-Type-Options': 'nosniff',
-      'X-Terminal-User': isTerminalUser,
-    });
+export const lambdaWrapperPublic = lambda => async (req, res) => {
+  let isTerminalUser =
+    get(req, 'apiGateway.event.requestContext.authorizer.isTerminalUser') ===
+    'true';
 
-    if (
-      ['application/pdf', 'text/html'].includes(
-        response.headers['Content-Type'],
-      )
-    ) {
-      res.set('Content-Type', response.headers['Content-Type']);
-      res.send(response.body);
-    } else if (response.headers['Content-Type'] === 'application/json') {
-      res.send(JSON.parse(response.body || 'null'));
-    } else if (response.headers.Location) {
-      res.redirect(response.headers.Location);
-    } else {
-      console.log('ERROR: we do not support this return type');
-    }
+  const event = {
+    headers: req.headers,
+    isTerminalUser,
+    path: req.path,
+    pathParameters: req.params,
+    queryStringParameters: req.query,
   };
+  req.setTimeout(LAMBDA_TIMEOUT_PUBLIC);
+
+  const lambdaResponse = await lambda({
+    ...event,
+    body: JSON.stringify(req.body),
+    logger: req.locals.logger,
+  });
+
+  res.status(lambdaResponse.statusCode);
+  res.set({
+    ...RESPONSE_HEADERS_PUBLIC,
+    'X-Terminal-User': isTerminalUser,
+  });
+
+  sendLambdaResponse({ lambdaResponse, res });
+};
+
+export const lambdaWrapper = lambda => async (req, res) => {
+  const event = {
+    headers: req.headers,
+    path: req.path,
+    pathParameters: req.params,
+    queryStringParameters: req.query,
+  };
+
+  req.setTimeout(LAMBDA_TIMEOUT_INTERNAL);
+
+  const lambdaResponse = await lambda({
+    ...event,
+    body: JSON.stringify(req.body),
+    logger: req.locals.logger,
+  });
+
+  res.status(lambdaResponse.statusCode);
+  res.set(RESPONSE_HEADERS_INTERNAL);
+
+  sendLambdaResponse({ lambdaResponse, res });
 };

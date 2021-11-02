@@ -53,6 +53,7 @@ app.use(async (req, res, next) => {
   return next();
 });
 app.use(logger());
+app.enable('etag');
 
 const {
   casePublicSearchLambda,

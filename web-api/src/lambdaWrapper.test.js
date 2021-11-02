@@ -1,165 +1,333 @@
-const { lambdaWrapper } = require('./lambdaWrapper');
+const {
+  LAMBDA_TIMEOUT_INTERNAL,
+  LAMBDA_TIMEOUT_PUBLIC,
+  lambdaWrapper,
+  lambdaWrapperPublic,
+  RESPONSE_HEADERS_INTERNAL,
+  RESPONSE_HEADERS_PUBLIC,
+} = require('./lambdaWrapper');
 
-describe('lambdaWrapper', () => {
-  let req, res;
-  beforeAll(() => {
-    jest.spyOn(console, 'log').mockImplementation(() => {});
-  });
+describe('lambda wrappers', () => {
+  describe('lambdaWrapper', () => {
+    let req, res;
+    beforeAll(() => {
+      jest.spyOn(console, 'log').mockImplementation(() => {});
+    });
 
-  beforeEach(() => {
-    req = {
-      apiGateway: {},
-      body: 'blank',
-      headers: {},
-      locals: {},
-      setTimeout: jest.fn(),
-    };
-    res = {
-      headers: {},
-      json: jest.fn(),
-      redirect: jest.fn(),
-      send: jest.fn(),
-      set: jest.fn(),
-      status: jest.fn(),
-    };
-    JSON.parse = jest.fn();
-  });
-
-  it('sets res.headers', async () => {
-    await lambdaWrapper(() => {
-      return {
-        body: 'hello world',
-        headers: {
-          'Content-Type': 'application/pdf',
-        },
+    beforeEach(() => {
+      req = {
+        apiGateway: {},
+        body: 'blank',
+        headers: {},
+        locals: {},
+        setTimeout: jest.fn(),
       };
-    })(req, res);
+      res = {
+        headers: {},
+        json: jest.fn(),
+        redirect: jest.fn(),
+        send: jest.fn(),
+        set: jest.fn(),
+        status: jest.fn(),
+      };
+      JSON.parse = jest.fn();
+    });
 
-    expect(res.set).toHaveBeenCalledWith({
-      'Access-Control-Allow-Origin': '*',
-      'Cache-Control':
-        'max-age=0, private, no-cache, no-store, must-revalidate',
-      'Content-Type': 'application/json',
-      Pragma: 'no-cache',
-      Vary: 'Authorization',
-      'X-Content-Type-Options': 'nosniff',
-      'X-Terminal-User': false,
+    it('sets res.headers', async () => {
+      await lambdaWrapper(() => {
+        return {
+          body: 'hello world',
+          headers: {
+            'Content-Type': 'application/pdf',
+          },
+        };
+      })(req, res);
+
+      expect(res.set).toHaveBeenCalledWith({
+        'Access-Control-Allow-Origin': '*',
+        'Cache-Control':
+          'max-age=0, private, no-cache, no-store, must-revalidate',
+        'Content-Type': 'application/json',
+        Pragma: 'no-cache',
+        Vary: 'Authorization',
+        'X-Content-Type-Options': 'nosniff',
+        'X-Terminal-User': false,
+      });
+    });
+
+    it('sends response.body if header is application/pdf', async () => {
+      await lambdaWrapper(() => {
+        return {
+          body: 'hello world',
+          headers: {
+            'Content-Type': 'application/pdf',
+          },
+        };
+      })(req, res);
+      expect(res.send).toHaveBeenCalled();
+      expect(res.set.mock.calls[1][0]).toBe('Content-Type');
+      expect(res.set.mock.calls[1][1]).toBe('application/pdf');
+    });
+
+    it('sends response.body if header is application/text', async () => {
+      await lambdaWrapper(() => {
+        return {
+          body: 'hello world',
+          headers: {
+            'Content-Type': 'text/html',
+          },
+        };
+      })(req, res);
+      expect(res.send).toHaveBeenCalled();
+    });
+
+    it('calls res.send with a JSON parsed body when header is application/json', async () => {
+      await lambdaWrapper(() => {
+        return {
+          body: '{}',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        };
+      })(req, res);
+      expect(JSON.parse).toHaveBeenCalled();
+      expect(res.send).toHaveBeenCalled();
+    });
+
+    it('calls res.send with when there is no res.body and when header is application/json', async () => {
+      await lambdaWrapper(() => {
+        return {
+          body: undefined,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        };
+      })(req, res);
+      expect(JSON.parse).toHaveBeenCalled();
+      expect(res.send).toHaveBeenCalledWith(undefined);
+    });
+
+    it('calls res.redirect if header Location is set', async () => {
+      await lambdaWrapper(() => {
+        return {
+          body: null,
+          headers: {
+            Location: 'http://example.com',
+          },
+        };
+      })(req, res);
+      expect(res.redirect).toHaveBeenCalled();
+    });
+
+    it('logs exception if unhandled response', async () => {
+      jest.spyOn(console, 'log');
+      await lambdaWrapper(() => {
+        return {
+          body: null,
+          headers: {},
+        };
+      })(req, res);
+      expect(console.log).toHaveBeenCalledWith(
+        'ERROR: we do not support this return type',
+      );
+    });
+
+    it('sets request timeout to 20 minutes', async () => {
+      await lambdaWrapper(() => {
+        return {
+          body: 'hello world',
+          headers: {
+            'Content-Type': 'application/pdf',
+          },
+        };
+      })(req, res);
+
+      expect(req.setTimeout).toHaveBeenCalled();
+      expect(req.setTimeout).toHaveBeenCalledWith(20 * 60 * 1000);
+    });
+
+    it('sets X-Terminal-User if it was set in api gateway event context', async () => {
+      req.apiGateway = {
+        event: { requestContext: { authorizer: { isTerminalUser: 'true' } } },
+      };
+      await lambdaWrapper(() => {
+        return {
+          body: 'hello world',
+          headers: {
+            'Content-Type': 'application/pdf',
+          },
+        };
+      })(req, res);
+
+      expect(res.set).toHaveBeenCalledWith({
+        'Access-Control-Allow-Origin': '*',
+        'Cache-Control':
+          'max-age=0, private, no-cache, no-store, must-revalidate',
+        'Content-Type': 'application/json',
+        Pragma: 'no-cache',
+        Vary: 'Authorization',
+        'X-Content-Type-Options': 'nosniff',
+        'X-Terminal-User': true,
+      });
     });
   });
 
-  it('sends response.body if header is application/pdf', async () => {
-    await lambdaWrapper(() => {
-      return {
-        body: 'hello world',
-        headers: {
-          'Content-Type': 'application/pdf',
-        },
-      };
-    })(req, res);
-    expect(res.send).toHaveBeenCalled();
-    expect(res.set.mock.calls[1][0]).toBe('Content-Type');
-    expect(res.set.mock.calls[1][1]).toBe('application/pdf');
-  });
+  describe('lambdaWrapperPublic', () => {
+    let req, res;
+    beforeAll(() => {
+      jest.spyOn(console, 'log').mockImplementation(() => {});
+    });
 
-  it('sends response.body if header is application/text', async () => {
-    await lambdaWrapper(() => {
-      return {
-        body: 'hello world',
-        headers: {
-          'Content-Type': 'text/html',
-        },
-      };
-    })(req, res);
-    expect(res.send).toHaveBeenCalled();
-  });
-
-  it('calls res.send with a JSON parsed body when header is application/json', async () => {
-    await lambdaWrapper(() => {
-      return {
-        body: '{}',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      };
-    })(req, res);
-    expect(JSON.parse).toHaveBeenCalled();
-    expect(res.send).toHaveBeenCalled();
-  });
-
-  it('calls res.send with when there is no res.body and when header is application/json', async () => {
-    await lambdaWrapper(() => {
-      return {
-        body: undefined,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      };
-    })(req, res);
-    expect(JSON.parse).toHaveBeenCalled();
-    expect(res.send).toHaveBeenCalledWith(undefined);
-  });
-
-  it('calls res.redirect if header Location is set', async () => {
-    await lambdaWrapper(() => {
-      return {
-        body: null,
-        headers: {
-          Location: 'http://example.com',
-        },
-      };
-    })(req, res);
-    expect(res.redirect).toHaveBeenCalled();
-  });
-
-  it('logs exception if unhandled response', async () => {
-    jest.spyOn(console, 'log');
-    await lambdaWrapper(() => {
-      return {
-        body: null,
+    beforeEach(() => {
+      req = {
+        apiGateway: {},
+        body: 'blank',
         headers: {},
+        locals: {},
+        setTimeout: jest.fn(),
       };
-    })(req, res);
-    expect(console.log).toHaveBeenCalledWith(
-      'ERROR: we do not support this return type',
-    );
-  });
-
-  it('sets request timeout to 20 minutes', async () => {
-    await lambdaWrapper(() => {
-      return {
-        body: 'hello world',
-        headers: {
-          'Content-Type': 'application/pdf',
-        },
+      res = {
+        headers: {},
+        json: jest.fn(),
+        redirect: jest.fn(),
+        send: jest.fn(),
+        set: jest.fn(),
+        status: jest.fn(),
       };
-    })(req, res);
+      JSON.parse = jest.fn();
+    });
 
-    expect(req.setTimeout).toHaveBeenCalled();
-    expect(req.setTimeout).toHaveBeenCalledWith(20 * 60 * 1000);
-  });
+    it('sets res.headers', async () => {
+      await lambdaWrapperPublic(() => {
+        return {
+          body: 'hello world',
+          headers: {
+            'Content-Type': 'application/pdf',
+          },
+        };
+      })(req, res);
 
-  it('sets X-Terminal-User if it was set in api gateway event context', async () => {
-    req.apiGateway = {
-      event: { requestContext: { authorizer: { isTerminalUser: 'true' } } },
-    };
-    await lambdaWrapper(() => {
-      return {
-        body: 'hello world',
-        headers: {
-          'Content-Type': 'application/pdf',
-        },
+      expect(res.set).toHaveBeenCalledWith({
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json',
+        'X-Content-Type-Options': 'nosniff',
+      });
+    });
+
+    it('sends response.body if header is application/pdf', async () => {
+      await lambdaWrapperPublic(() => {
+        return {
+          body: 'hello world',
+          headers: {
+            'Content-Type': 'application/pdf',
+          },
+        };
+      })(req, res);
+      expect(res.send).toHaveBeenCalled();
+      expect(res.set.mock.calls[1][0]).toBe('Content-Type');
+      expect(res.set.mock.calls[1][1]).toBe('application/pdf');
+    });
+
+    it('sends response.body if header is application/text', async () => {
+      await lambdaWrapperPublic(() => {
+        return {
+          body: 'hello world',
+          headers: {
+            'Content-Type': 'text/html',
+          },
+        };
+      })(req, res);
+      expect(res.send).toHaveBeenCalled();
+    });
+
+    it('calls res.send with a JSON parsed body when header is application/json', async () => {
+      await lambdaWrapperPublic(() => {
+        return {
+          body: '{}',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        };
+      })(req, res);
+      expect(JSON.parse).toHaveBeenCalled();
+      expect(res.send).toHaveBeenCalled();
+    });
+
+    it('calls res.send with when there is no res.body and when header is application/json', async () => {
+      await lambdaWrapperPublic(() => {
+        return {
+          body: undefined,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        };
+      })(req, res);
+      expect(JSON.parse).toHaveBeenCalled();
+      expect(res.send).toHaveBeenCalledWith(undefined);
+    });
+
+    it('calls res.redirect if header Location is set', async () => {
+      await lambdaWrapperPublic(() => {
+        return {
+          body: null,
+          headers: {
+            Location: 'http://example.com',
+          },
+        };
+      })(req, res);
+      expect(res.redirect).toHaveBeenCalled();
+    });
+
+    it('logs exception if unhandled response', async () => {
+      jest.spyOn(console, 'log');
+      await lambdaWrapperPublic(() => {
+        return {
+          body: null,
+          headers: {},
+        };
+      })(req, res);
+      expect(console.log).toHaveBeenCalledWith(
+        'ERROR: we do not support this return type',
+      );
+    });
+
+    it('sets request timeout to 20 minutes', async () => {
+      await lambdaWrapperPublic(() => {
+        return {
+          body: 'hello world',
+          headers: {
+            'Content-Type': 'application/pdf',
+          },
+        };
+      })(req, res);
+
+      expect(req.setTimeout).toHaveBeenCalled();
+      expect(req.setTimeout).toHaveBeenCalledWith(20 * 60 * 1000);
+    });
+
+    it('sets X-Terminal-User if it was set in api gateway event context', async () => {
+      req.apiGateway = {
+        event: { requestContext: { authorizer: { isTerminalUser: 'true' } } },
       };
-    })(req, res);
+      await lambdaWrapperPublic(() => {
+        return {
+          body: 'hello world',
+          headers: {
+            'Content-Type': 'application/pdf',
+          },
+        };
+      })(req, res);
 
-    expect(res.set).toHaveBeenCalledWith({
-      'Access-Control-Allow-Origin': '*',
-      'Cache-Control':
-        'max-age=0, private, no-cache, no-store, must-revalidate',
-      'Content-Type': 'application/json',
-      Pragma: 'no-cache',
-      Vary: 'Authorization',
-      'X-Content-Type-Options': 'nosniff',
-      'X-Terminal-User': true,
+      expect(res.set).toHaveBeenCalledWith({
+        'Access-Control-Allow-Origin': '*',
+        'Cache-Control':
+          'max-age=0, private, no-cache, no-store, must-revalidate',
+        'Content-Type': 'application/json',
+        Pragma: 'no-cache',
+        Vary: 'Authorization',
+        'X-Content-Type-Options': 'nosniff',
+        'X-Terminal-User': true,
+      });
     });
   });
 });
