@@ -466,9 +466,6 @@ const createTestApplicationContext = ({ user } = {}) => {
       .fn()
       .mockReturnValue({ url: 'http://example.com/' }),
     getElasticsearchReindexRecords: jest.fn(),
-    getExternalOrderSearchEnabled: jest.fn(),
-    getInternalOpinionSearchEnabled: jest.fn(),
-    getInternalOrderSearchEnabled: jest.fn(),
     getItem: jest.fn().mockImplementation(getItem),
     getJudgesChambers: jest.fn().mockImplementation(getJudgesChambers),
     getJudgesChambersWithLegacy: jest
