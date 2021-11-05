@@ -23,10 +23,6 @@ export const featureFlagHelper = (get, applicationContext) => {
     );
   }
 
-  const isOpinionSearchEnabled = applicationContext.isFeatureEnabled(
-    'advanced_opinion_search',
-  );
-
   return {
     isInternalOpinionSearchEnabled,
     isOrderSearchEnabledForRole,
