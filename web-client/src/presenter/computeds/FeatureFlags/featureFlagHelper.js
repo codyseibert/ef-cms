@@ -5,6 +5,11 @@ export const featureFlagHelper = (get, applicationContext) => {
   const { ALLOWLIST_FEATURE_FLAGS } = applicationContext.getConstants();
 
   const isUserInternal = applicationContext.getUtilities().isInternalUser(role);
+
+  const isInternalOpinionSearchEnabled = get(
+    state.featureFlags[ALLOWLIST_FEATURE_FLAGS.INTERNAL_OPINION_SEARCH.key],
+  );
+
   const isInternalOrderSearchEnabled = get(
     state.featureFlags[ALLOWLIST_FEATURE_FLAGS.INTERNAL_ORDER_SEARCH.key],
   );
@@ -23,7 +28,7 @@ export const featureFlagHelper = (get, applicationContext) => {
   );
 
   return {
-    isOpinionSearchEnabled,
+    isInternalOpinionSearchEnabled,
     isOrderSearchEnabledForRole,
   };
 };

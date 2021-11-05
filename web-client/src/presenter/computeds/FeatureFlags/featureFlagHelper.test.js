@@ -16,8 +16,6 @@ describe('featureFlagHelper', () => {
 
   describe('isOrderSearchEnabledForRole', () => {
     it('should be true when the user is internal and state.internal-order-search-enabled is true', () => {
-      applicationContext.isFeatureEnabled.mockReturnValue(true);
-
       const featureFlagHelper = withAppContextDecorator(
         featureFlagHelperComputed,
         {
@@ -40,8 +38,6 @@ describe('featureFlagHelper', () => {
     });
 
     it('should be false when the user is external, state.internal-order-search-enabled is true, and state.external-order-search-enabled is false', () => {
-      applicationContext.isFeatureEnabled.mockReturnValue(false);
-
       const featureFlagHelper = withAppContextDecorator(
         featureFlagHelperComputed,
         {
@@ -65,8 +61,6 @@ describe('featureFlagHelper', () => {
     });
 
     it('should be true when the user is external, state.internal-order-search-enabled is false and state.external-order-search-enabled is true', () => {
-      applicationContext.isFeatureEnabled.mockReturnValue(false);
-
       const featureFlagHelper = withAppContextDecorator(
         featureFlagHelperComputed,
         {
@@ -90,8 +84,6 @@ describe('featureFlagHelper', () => {
     });
 
     it('should be true when the user is public, state.internal-order-search-enabled is false and state.external-order-search-enabled is true', () => {
-      applicationContext.isFeatureEnabled.mockReturnValue(false);
-
       const featureFlagHelper = withAppContextDecorator(
         featureFlagHelperComputed,
         {
@@ -115,8 +107,6 @@ describe('featureFlagHelper', () => {
     });
 
     it('should be false when the user is internal, state.internal-order-search-enabled is false and state.external-order-search-enabled is false', () => {
-      applicationContext.isFeatureEnabled.mockReturnValue(false);
-
       const featureFlagHelper = withAppContextDecorator(
         featureFlagHelperComputed,
         {
@@ -151,7 +141,9 @@ describe('featureFlagHelper', () => {
 
       const result = runCompute(featureFlagHelper, {
         state: {
-          isInternalOpinionSearchEnabled: true,
+          featureFlags: {
+            [ALLOWLIST_FEATURE_FLAGS.INTERNAL_OPINION_SEARCH.key]: true,
+          },
           user: mockExternalUser,
         },
       });
@@ -171,7 +163,9 @@ describe('featureFlagHelper', () => {
 
       const result = runCompute(featureFlagHelper, {
         state: {
-          isInternalOpinionSearchEnabled: false,
+          featureFlags: {
+            [ALLOWLIST_FEATURE_FLAGS.INTERNAL_OPINION_SEARCH.key]: false,
+          },
           user: mockExternalUser,
         },
       });
