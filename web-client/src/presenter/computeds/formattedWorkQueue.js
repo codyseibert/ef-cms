@@ -74,6 +74,9 @@ export const formatWorkItem = ({
   result.showUnreadIndicators = !result.isRead;
   result.showUnreadStatusIcon = !result.isRead && !result.showHighPriorityIcon;
 
+  result.showComplete = !result.isInitializeCase;
+  result.showSendTo = !result.isInitializeCase;
+
   if (result.assigneeName === 'Unassigned' && !result.showHighPriorityIcon) {
     result.showUnassignedIcon = true;
   }
