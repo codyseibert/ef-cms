@@ -69,7 +69,7 @@ jobs:
 
   build-client-integration:
     docker:
-      - image: $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/ef-cms-us-east-1:latest
+      - image: $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/ef-cms-us-east-1:efcms-build-$(git rev-parse --short HEAD)
         aws_auth:
           aws_access_key_id: $AWS_ACCESS_KEY_ID
           aws_secret_access_key: $AWS_SECRET_ACCESS_KEY
@@ -85,8 +85,8 @@ jobs:
     resource_class: large
     parallelism: 8
     steps:
-      - checkout-and-cache-source-code
-      - npm-install
+      # - checkout-and-cache-source-code
+      # - npm-install
       - run:
           name: Create web-client Artifacts Directory
           command: mkdir /tmp/web-client/
