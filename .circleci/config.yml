@@ -56,7 +56,7 @@ jobs:
       - run:
           name: Build Docker Image
           command: |
-            TAG=$(git rev-parse --short HEAD)
+            TAG=CIRCLE_SHA1
             docker build -t efcms-build:$TAG -f Dockerfile .
             aws --version
             curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64-2.3.6.zip" -o "awscliv2.zip"
@@ -68,8 +68,10 @@ jobs:
             docker push "$AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/ef-cms-us-east-1:efcms-build-$TAG"
 
   build-client-integration:
+    enviroment:
+      - IMAGE_NAME: $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/ef-cms-us-east-1:efcms-build-$CIRCLE_SHA1
     docker:
-      - image: $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/ef-cms-us-east-1:efcms-build-$(git rev-parse --short HEAD)
+      - image: $IMAGE_NAME
         aws_auth:
           aws_access_key_id: $AWS_ACCESS_KEY_ID
           aws_secret_access_key: $AWS_SECRET_ACCESS_KEY
