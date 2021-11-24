@@ -84,7 +84,7 @@ jobs:
           ES_JAVA_OPTS: '-Xms512m -Xmx512m'
     resource_class: large
     working_directory: /home/app
-    # parallelism: 8
+    parallelism: 8
     steps:
       # - checkout-and-cache-source-code
       # - npm-install
@@ -92,16 +92,8 @@ jobs:
           name: Create web-client Artifacts Directory
           command: mkdir /tmp/web-client/
       - run:
-          name: 'test'
-          command: pwd
-      - run:
-          name: 'test2'
-          command: ls
-      - run:
           name: Web Client - Integration Test
           command: |
-            pwd
-            ls
             CI=true \
             TEMP_DOCUMENTS_BUCKET_NAME=noop-temp-documents-local-us-east-1 \
             QUARANTINE_BUCKET_NAME=noop-quarantine-local-us-east-1 \
