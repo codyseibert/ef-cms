@@ -61,7 +61,7 @@ jobs:
             aws --version
             curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64-2.3.6.zip" -o "awscliv2.zip"
             unzip awscliv2.zip
-            ./aws/install
+            sudo ./aws/install
             aws --version
             aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com
             docker tag "efcms-build:$TAG" "$AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/efcms-build:$TAG"
