@@ -57,7 +57,7 @@ jobs:
           name: Build Docker Image
           command: |
             TAG=$CIRCLE_SHA1
-            docker build -t efcms-build:$TAG -f Dockerfile .
+            docker build -t efcms-build:$TAG -f Dockerfile-CI .
             aws --version
             curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64-2.3.6.zip" -o "awscliv2.zip"
             unzip awscliv2.zip

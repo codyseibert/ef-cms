@@ -26,7 +26,9 @@ COPY package.json /home/app/package.json
 COPY package-lock.json /home/app/package-lock.json
 RUN npm set progress=false && \
   npm config set puppeteer_skip_chromium_download true && \
-  npm ci
+  npm set progress=false && \
+  npm ci && \
+  npm rebuild
 
 COPY . /home/app
 

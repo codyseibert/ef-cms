@@ -17,3 +17,16 @@ RUN ./aws/install
 RUN rm awscliv2.zip
 
 RUN apt-get install -yq less=487-0.1+b1 python python-dev python-pip jq=1.5+dfsg-2+b1
+
+COPY package.json /home/app/package.json
+COPY package-lock.json /home/app/package-lock.json
+RUN npm set progress=false && \
+  npm ci
+
+COPY . /home/app
+
+RUN mkdir -p /home/app/web-client/cypress-integration/screenshots && \
+  mkdir -p /home/app/web-client/cypress-integration/videos && \
+  mkdir -p /home/app/web-client/cypress-smoketests/videos
+
+CMD echo "🔥"
