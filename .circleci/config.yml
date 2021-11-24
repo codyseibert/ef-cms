@@ -38,8 +38,8 @@ jobs:
       #       source $BASH_ENV
       - aws-ecr/build-and-push-image:
           account-url: $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com
-          aws-access-key-id: $AWS_ACCESS_KEY_ID
-          aws-secret-access-key: $AWS_SECRET_ACCESS_KEY
+          aws-access-key-id: AWS_ACCESS_KEY_ID
+          aws-secret-access-key: AWS_SECRET_ACCESS_KEY
           # context: myContext
           # create-repo: true
           dockerfile: Dockerfile
