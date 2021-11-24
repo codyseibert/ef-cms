@@ -24,20 +24,20 @@ commands:
             npm rebuild
 
 jobs:
-  build-container: 
+  build-container:
     machine:
-        docker_layer_caching: true
-      steps:
-        - checkout
-        # - run:
-        #     name: Setup Env
-        #     command: |
-        #       cat ./env-for-circle/$CIRCLE_BRANCH.sh >> $BASH_ENV
-        #       source $BASH_ENV
-        - run:
-            name: Build Docker Image
-            command: |
-              docker build -t efcms-build:$(git rev-parse HEAD) -f Dockerfile .
+      docker_layer_caching: true
+    steps:
+      - checkout
+      # - run:
+      #     name: Setup Env
+      #     command: |
+      #       cat ./env-for-circle/$CIRCLE_BRANCH.sh >> $BASH_ENV
+      #       source $BASH_ENV
+      - run:
+          name: Build Docker Image
+          command: |
+            docker build -t efcms-build:$(git rev-parse HEAD) -f Dockerfile .
   build-client-integration:
     docker:
       - image: $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/ef-cms-us-east-1:latest
@@ -852,7 +852,7 @@ workflows:
   build-contianer:
     jobs:
       - build-container
-    
+
   build-and-deploy:
     jobs:
       - build-client-integration:
