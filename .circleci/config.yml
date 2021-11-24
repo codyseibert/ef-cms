@@ -93,6 +93,8 @@ jobs:
       - run:
           name: Web Client - Integration Test
           command: |
+            pwd
+            ls
             CI=true \
             TEMP_DOCUMENTS_BUCKET_NAME=noop-temp-documents-local-us-east-1 \
             QUARANTINE_BUCKET_NAME=noop-quarantine-local-us-east-1 \
