@@ -1,4 +1,6 @@
 version: 2.1
+orbs:
+  aws-ecr: circleci/aws-ecr@7.3.0
 commands:
   checkout-and-cache-source-code:
     steps:
@@ -34,14 +36,28 @@ jobs:
       #     command: |
       #       cat ./env-for-circle/$CIRCLE_BRANCH.sh >> $BASH_ENV
       #       source $BASH_ENV
-      - run:
-          name: Build Docker Image
-          command: |
-            TAG=$(git rev-parse --short HEAD)
-            docker build -t efcms-build:$TAG -f Dockerfile .
-            aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com
-            docker tag "efcms-build:$TAG" "$AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/efcms-build:$TAG"
-            docker push "$AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/ef-cms-us-east-1:$TAG"
+      - aws-ecr/build-and-push-image:
+          account-url: $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com
+          aws-access-key-id: $AWS_ACCESS_KEY_ID
+          aws-secret-access-key: $AWS_SECRET_ACCESS_KEY
+          # context: myContext
+          # create-repo: true
+          dockerfile: Dockerfile
+          no-output-timeout: 20m
+          # path: pathToMyDockerfile
+          # profile-name: myProfileName
+          region: us-east-1
+          repo: ef-cms-us-east-1
+          # skip-when-tags-exist: false
+          tag: '$(git rev-parse --short HEAD)'
+      # - run:
+      #     name: Build Docker Image
+      #     command: |
+      #       TAG=$(git rev-parse --short HEAD)
+      #       docker build -t efcms-build:$TAG -f Dockerfile .
+      #       aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com
+      #       docker tag "efcms-build:$TAG" "$AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/efcms-build:$TAG"
+      #       docker push "$AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/ef-cms-us-east-1:$TAG"
 
   build-client-integration:
     docker:
