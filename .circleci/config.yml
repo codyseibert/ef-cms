@@ -31,13 +31,16 @@ jobs:
       docker_layer_caching: true
     steps:
       - checkout
-      # - run:
-      #     name: Setup Env
-      #     command: |
-      #       cat ./env-for-circle/$CIRCLE_BRANCH.sh >> $BASH_ENV
-      #       source $BASH_ENV
+      - run:
+          name: Setup Env
+          command: |
+            cat ./env-for-circle/$CIRCLE_BRANCH.sh >> $BASH_ENV
+            echo "export ACCOUNT_URL=$AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com" >> $BASH_ENV
+            echo "export BUILD_TAG=$(git rev-parse --short HEAD)" >> $BASH_ENV"
+            echo "export REGION=us-east-1" >> $BASH_ENV"
+            source $BASH_ENV
       - aws-ecr/build-and-push-image:
-          account-url: $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com
+          account-url: ACCOUNT_URL
           aws-access-key-id: AWS_ACCESS_KEY_ID
           aws-secret-access-key: AWS_SECRET_ACCESS_KEY
           # context: myContext
@@ -46,10 +49,10 @@ jobs:
           no-output-timeout: 20m
           # path: pathToMyDockerfile
           # profile-name: myProfileName
-          region: us-east-1
+          region: REGION
           repo: ef-cms-us-east-1
           # skip-when-tags-exist: false
-          tag: '$(git rev-parse --short HEAD)'
+          tag: BUILD_TAG
       # - run:
       #     name: Build Docker Image
       #     command: |
