@@ -849,12 +849,9 @@ build-and-deploy-with-context-defaults: &build-and-deploy-with-context-defaults
 workflows:
   version: 2
 
-  build-contianer:
-    jobs:
-      - build-container
-
   build-and-deploy:
     jobs:
+      - build-container
       - build-client-integration:
           requires:
             - build-container
