@@ -69,10 +69,6 @@ jobs:
 
   build-client-integration:
     docker:
-      - image: $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/ef-cms-us-east-1:efcms-build-$CIRCLE_SHA1
-        aws_auth:
-          aws_access_key_id: $AWS_ACCESS_KEY_ID
-          aws_secret_access_key: $AWS_SECRET_ACCESS_KEY
       - image: amazon/dynamodb-local
         command: ['-jar', 'DynamoDBLocal.jar', '-inMemory']
         environment:
@@ -82,14 +78,24 @@ jobs:
         environment:
           discovery.type: single-node
           ES_JAVA_OPTS: '-Xms512m -Xmx512m'
+      - image: $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/ef-cms-us-east-1:efcms-build-$CIRCLE_SHA1
+        aws_auth:
+          aws_access_key_id: $AWS_ACCESS_KEY_ID
+          aws_secret_access_key: $AWS_SECRET_ACCESS_KEY
     resource_class: large
-    parallelism: 8
+    # parallelism: 8
     steps:
       # - checkout-and-cache-source-code
       # - npm-install
       - run:
           name: Create web-client Artifacts Directory
           command: mkdir /tmp/web-client/
+      - run:
+          name: 'test'
+          command: pwd
+      - run:
+          name: 'test2'
+          command: ls
       - run:
           name: Web Client - Integration Test
           command: |
