@@ -73,16 +73,17 @@ jobs:
         aws_auth:
           aws_access_key_id: $AWS_ACCESS_KEY_ID
           aws_secret_access_key: $AWS_SECRET_ACCESS_KEY
-      # - image: amazon/dynamodb-local
-      #   command: ['-jar', 'DynamoDBLocal.jar', '-inMemory']
-      #   environment:
-      #     discovery.type: single-node
-      #     JAVA_OPTS: '-Xms512m -Xmx512m'
-      # - image: elastic/elasticsearch:7.8.1
-      #   environment:
-      #     discovery.type: single-node
-      #     ES_JAVA_OPTS: '-Xms512m -Xmx512m'
+      - image: amazon/dynamodb-local
+        command: ['-jar', 'DynamoDBLocal.jar', '-inMemory']
+        environment:
+          discovery.type: single-node
+          JAVA_OPTS: '-Xms512m -Xmx512m'
+      - image: elastic/elasticsearch:7.8.1
+        environment:
+          discovery.type: single-node
+          ES_JAVA_OPTS: '-Xms512m -Xmx512m'
     resource_class: large
+    working_directory: /home/app
     # parallelism: 8
     steps:
       # - checkout-and-cache-source-code
