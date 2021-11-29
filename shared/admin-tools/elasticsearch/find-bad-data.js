@@ -66,6 +66,24 @@ const version = process.argv[3] || 'alpha';
     });
   }
 
+  const caseQueryParams = {
+    has_parent: {
+      inner_hits: {
+        _source: {
+          includes: sourceFields,
+        },
+        name: 'case-mappings',
+      },
+      parent_type: 'case',
+      query: {
+        bool: { filter: [], must_not: [{ term: { 'isSealed.BOOL': true } }] },
+      },
+      score: true,
+    },
+  };
+
+  docketEntryQueryParams.push(caseQueryParams);
+
   const documentQuery = {
     body: {
       _source: sourceFields,
@@ -85,6 +103,11 @@ const version = process.argv[3] || 'alpha';
   const results = await esClient.search(documentQuery);
 
   // log results
+  console.log(
+    '******* Raw results',
+    JSON.stringify(results.hits.hits, null, 2),
+    results.hits.hits.length,
+  );
 
   // log validation of results
   const filteredResults = await filterForPublic({
@@ -98,8 +121,8 @@ const version = process.argv[3] || 'alpha';
       applicationContext,
     },
   );
-
   console.log(
+    '******* Validated results',
     JSON.stringify(validatedResults, null, 2),
     validatedResults.length,
   );

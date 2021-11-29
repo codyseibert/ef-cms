@@ -1,5 +1,6 @@
 const AWS = require('aws-sdk');
 const { get } = require('lodash');
+const { getClient } = require('../../../../web-api/elasticsearch/client');
 
 exports.search = async ({ applicationContext, searchParameters }) => {
   const caseMap = {};
@@ -46,14 +47,21 @@ exports.search = async ({ applicationContext, searchParameters }) => {
 
   let body;
   try {
-    body = await applicationContext.getSearchClient().search(searchParameters);
+    // body = await applicationContext.getSearchClient().search(searchParameters);
+    const esClient = await getClient({
+      environmentName: 'mig',
+      version: 'alpha',
+    });
+    body = await esClient.search(searchParameters);
   } catch (searchError) {
-    applicationContext.logger.error(searchError);
+    console.log(searchError);
     throw new Error('Search client encountered an error.');
   }
 
   const total = get(body, 'hits.total.value', 0);
   const results = get(body, 'hits.hits', []).map(formatHit);
+
+  // console.log(results);
 
   return {
     results,

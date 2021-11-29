@@ -1,13 +1,23 @@
+const createApplicationContext = require('../../../../web-api/src/applicationContext');
 const {
   DOCUMENT_SEARCH_SORT,
   MAX_SEARCH_CLIENT_RESULTS,
   OPINION_JUDGE_FIELD,
+  ORDER_EVENT_CODES,
   ORDER_JUDGE_FIELD,
 } = require('../../business/entities/EntityConstants');
+const {
+  filterForPublic,
+} = require('../../business/useCases/public/publicHelpers');
+const {
+  PublicDocumentSearchResult,
+} = require('../../business/entities/documents/PublicDocumentSearchResult');
 const { search } = require('./searchClient');
 
+const applicationContext = createApplicationContext({});
+
 exports.advancedDocumentSearch = async ({
-  applicationContext,
+  // applicationContext,
   caseTitleOrPetitioner,
   docketNumber,
   documentEventCodes,
@@ -225,3 +235,27 @@ exports.advancedDocumentSearch = async ({
 
   return { results, totalCount: total };
 };
+
+(async () => {
+  const { results } = await exports.advancedDocumentSearch({
+    documentEventCodes: ORDER_EVENT_CODES,
+    keyword: 'facebook',
+  });
+
+  const filteredResults = await filterForPublic({
+    applicationContext,
+    unfiltered: results.hits.hits,
+  });
+
+  const validatedResults = PublicDocumentSearchResult.validateRawCollection(
+    filteredResults,
+    {
+      applicationContext,
+    },
+  );
+  console.log(
+    '******* Validated results',
+    JSON.stringify(validatedResults, null, 2),
+    validatedResults.length,
+  );
+})();

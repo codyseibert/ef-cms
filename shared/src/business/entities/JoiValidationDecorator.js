@@ -249,7 +249,7 @@ exports.joiValidationDecorator = function (
       try {
         valid = new entityConstructor(entity, args).validate().toRawObject();
       } catch (e) {
-        console.log(entity);
+        console.log('!!!!! BROKEN: ', entity, e);
         // throw e;
       }
       return valid;
