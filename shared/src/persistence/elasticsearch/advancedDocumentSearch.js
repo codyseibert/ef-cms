@@ -244,7 +244,7 @@ exports.advancedDocumentSearch = async ({
 
   const filteredResults = await filterForPublic({
     applicationContext,
-    unfiltered: results.hits.hits,
+    unfiltered: results,
   });
 
   const validatedResults = PublicDocumentSearchResult.validateRawCollection(

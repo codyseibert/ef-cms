@@ -39,9 +39,9 @@ const {
 const {
   addServedStampToDocument,
 } = require('../../shared/src/business/useCases/courtIssuedDocument/addServedStampToDocument');
-const {
-  advancedDocumentSearch,
-} = require('../../shared/src/persistence/elasticsearch/advancedDocumentSearch');
+// const {
+//   advancedDocumentSearch,
+// } = require('../../shared/src/persistence/elasticsearch/advancedDocumentSearch');
 const {
   appendPaperServiceAddressPageToPdf,
 } = require('../../shared/src/business/useCaseHelper/service/appendPaperServiceAddressPageToPdf');
@@ -1415,7 +1415,7 @@ const gatewayMethods = {
     updateUserEmail,
   }),
   // methods below are not known to create "entity" records
-  advancedDocumentSearch,
+  // advancedDocumentSearch,
   caseAdvancedSearch,
   casePublicSearch: casePublicSearchPersistence,
   createNewPetitionerUser,
