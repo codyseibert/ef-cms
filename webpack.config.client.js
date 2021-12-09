@@ -13,7 +13,6 @@ module.exports = {
         test: /\.(js|jsx)$/,
         use: ['babel-loader'],
       },
-
       {
         test: /\.(png|svg|jpg|jpeg|gif|pdf|woff|woff2|ttf)$/i,
         type: 'asset',
@@ -29,6 +28,14 @@ module.exports = {
       {
         test: /\.pug$/i,
         use: ['pug-loader'],
+      },
+      {
+        exclude: /node_modules/,
+        resolve: {
+          extensions: ['.ts', '.tsx', '.js', '.json'],
+        },
+        test: /\.(ts|tsx)$/,
+        use: 'ts-loader',
       },
     ],
   },
