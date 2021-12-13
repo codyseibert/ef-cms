@@ -1,5 +1,7 @@
 # Electronic Filing / Case Management System (DAWSON)
 
+DELETE ALL THE THINGS!
+
 ## Overview
 
 **The [United States Tax Court](https://ustaxcourt.gov/)** is an independent Federal court that provides a forum for settling disputes between taxpayers and the Internal Revenue Service. There are approximately 200 employees at the Court and they handle approximately 60,000 petitions each year. About 60% of these petitions are filed from people without lawyers.
