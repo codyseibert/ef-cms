@@ -4,8 +4,8 @@ const es = new AWS.ES({ region: 'us-east-1' });
 (async () => {
   const { DomainNames } = await es.listDomainNames().promise();
 
-  const expDomains = DomainNames.filter(domain =>
-    domain.DomainName.includes('-exp'),
+  const expDomains = DomainNames.filter(({ DomainName }) =>
+    DomainName.includes('-exp'),
   );
 
   for (let domain of expDomains) {
