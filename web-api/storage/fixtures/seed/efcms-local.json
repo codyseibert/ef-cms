@@ -18538,6 +18538,51 @@
     "docketNumber": "129-20"
   },
   {
+    "pk": "case|104-17",
+    "sk": "docket-entry|4439b655-35c6-44a3-8006-057ea9fa4c9d",
+    "index": 4,
+    "servedParties": [
+     {
+      "name": "Donald J. Faull"
+     },
+     {
+      "name": "IRS",
+      "role": "irsSuperuser"
+     }
+    ],
+    "documentType": "Order",
+    "servedPartiesCode": "B",
+    "pending": false,
+    "isLegacyServed": true,
+    "isFileAttached": true,
+    "isSealed": false,
+    "signedJudgeName": "Cantrel",
+    "numberOfPages": 1,
+    "aws:rep:deleting": false,
+    "filers": [],
+    "docketEntryId": "4439b655-35c6-44a3-8006-057ea9fa4c9d",
+    "userId": "a11077ed-c01d-4add-ab1e-da7aba5eda7a",
+    "processingStatus": "complete",
+    "isMinuteEntry": false,
+    "isStricken": false,
+    "isOnDocketRecord": true,
+    "documentTitle": "ORDER R/mot filed 10/5/81 is denied.",
+    "indexedTimestamp": 1626691654685,
+    "eventCode": "O",
+    "signedByUserId": "a11077ed-c01d-4add-ab1e-da7aba5eda7a",
+    "receivedAt": "1981-12-23T05:00:00.000Z",
+    "isLegacy": true,
+    "createdAt": "1981-12-23T00:00:00.000-05:00",
+    "signedAt": "Not in Blackstone",
+    "filingDate": "1981-12-23T00:00:00.000-05:00",
+    "entityName": "DocketEntry",
+    "docketNumber": "104-17",
+    "isLegacySealed": false,
+    "isDraft": false,
+    "documentContentsId": "480cf742-99f0-4955-b36d-68aecc73c548",
+    "servedAt": "1981-12-29T00:00:00.000-05:00"
+   },
+  {
     "servedParties": [
       {
         "name": "IRS",
@@ -21333,6 +21378,18 @@
     "email": "judgeFieri@example.com"
   },
   {
+    "pk": "user|45613be7-9066-431f-8457-653e9b387986",
+    "sk": "user|45613be7-9066-431f-8457-653e9b387986",
+    "email": "cantrel@example.com",
+    "name": "Cantrel",
+    "judgeFullName": "Cantrel",
+    "role": "legacyJudge",
+    "section": "legacyJudgesChambers",
+    "judgeTitle": "Judge",
+    "userId": "45613be7-9066-431f-8457-653e9b387986",
+    "entityName": "User"
+   },
+  {
     "sk": "pdfjs-express-viewer-enabled",
     "current": false,
     "pk": "pdfjs-express-viewer-enabled"
@@ -21879,6 +21936,10 @@
   },
   {
     "sk": "user|09b7c6c9-2d9e-43a5-83a4-096ae5362725",
+    "pk": "section|judge"
+  },
+  {
+    "sk": "user|45613be7-9066-431f-8457-653e9b387986",
     "pk": "section|judge"
   },
   {
