@@ -34,6 +34,16 @@
     "entityName": "User"
   },
   {
+    "email": "cantrel@example.com",
+    "name": "Cantrel",
+    "judgeFullName": "Cantrel",
+    "role": "legacyJudge",
+    "section": "legacyJudgesChambers",
+    "judgeTitle": "Judge",
+    "userId": "45613be7-9066-431f-8457-653e9b387986",
+    "entityName": "User"
+   },
+  {
     "role": "judge",
     "name": "Colvin",
     "section": "colvinsChambers",
