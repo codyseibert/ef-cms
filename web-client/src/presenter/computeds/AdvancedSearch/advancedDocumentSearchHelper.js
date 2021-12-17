@@ -1,4 +1,4 @@
-advancedDocumentSearchHelperimport { capitalize } from 'lodash';
+import { capitalize } from 'lodash';
 import { paginationHelper } from './advancedSearchHelper';
 import { state } from 'cerebral';
 
